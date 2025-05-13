@@ -8,13 +8,13 @@ interface AuthContextInterface {
     register: (user: any) => Promise<boolean>;
     logout: () => Promise<void>;
     updateUser: (user: any) => Promise<void>;
-    updateRole: (role: "client" | "chef" | "cashier") => Promise<void>;
+    updateRole: (role: "vaccinationAgent" | "fedeganManager" | "farmManager") => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextInterface | null>(null);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [user, setUser] = useState<any>(null);
+    const [setUser] = useState<any>(null);
 
     const login = async (email: string, password: string) => {
         try {
