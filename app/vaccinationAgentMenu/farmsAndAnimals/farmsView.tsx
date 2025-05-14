@@ -123,8 +123,20 @@ export default function FarmsView() {
         }
     };
 
+    const handleFarmPress = (farmId: string) => {
+        console.log("Finca seleccionada, ID:", farmId);
+        router.push({
+            pathname: "/vaccinationAgentMenu/farmsAndAnimals/farmDetails/[farmId]",
+            params: { farmId },
+        });
+    };
+
     const renderFarmItem = ({ item }: { item: Farm }) => (
-        <View style={styles.farmItem}>
+        <TouchableOpacity
+            style={styles.farmItem}
+            onPress={() => handleFarmPress(item.id)}
+            activeOpacity={0.7}
+        >
             <View style={styles.farmContent}>
                 <View style={styles.farmIcon}>
                     <Icon name="barn" size={24} color={COLORS.forestGreen} />
@@ -137,7 +149,8 @@ export default function FarmsView() {
             </View>
             <TouchableOpacity
                 style={styles.deleteButton}
-                onPress={() => {
+                onPress={(e) => {
+                    e.stopPropagation(); // Evita que el clic en "Eliminar" dispare handleFarmPress
                     console.log("Botón Eliminar presionado para finca:", item.name, item.id);
                     showAlert(
                         "Confirmar",
@@ -151,7 +164,7 @@ export default function FarmsView() {
                 <Icon name="delete-outline" size={20} color={COLORS.white} />
                 <Text style={styles.deleteButtonText}>Eliminar</Text>
             </TouchableOpacity>
-        </View>
+        </TouchableOpacity>
     );
 
     return (
@@ -204,7 +217,7 @@ const styles = StyleSheet.create({
         padding: 8,
     },
     title: {
-        fontSize: 26,
+        fontSize: 28,
         fontWeight: "700",
         color: COLORS.forestGreen,
         marginLeft: 8,
