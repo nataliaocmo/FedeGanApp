@@ -26,12 +26,14 @@ interface Farm {
 
 interface Animal {
     id: string;
-    name: string;
+    name?: string; // Optional, as it's commented out in animalRegister.tsx
     species: string;
     breed: string;
     age: number;
     medicalHistory: string;
-    ownerInfo: string;
+    status: "Sano" | "Enfermo";
+    disease: string | null;
+    quantity: number;
     farmId: string;
     createdAt: any;
     createdBy: string;
@@ -119,13 +121,27 @@ export default function FarmDetails() {
         });
     };
 
+    const handleNavigateToAnimalDetails = (animalId: string) => {
+        if (typeof farmId !== "string" || !farmId) {
+            console.error("ID de finca inválido para navegación:", farmId);
+            showAlert("Error", "ID de finca inválido.", () => {});
+            return;
+        }
+
+        console.log("Navegando a animalDetails, animalId:", animalId);
+        router.push({
+            pathname: "/vaccinationAgentMenu/farmsAndAnimals/animalDetails/[animalId]",
+            params: { animalId, farmId },
+        });
+    };
+
     if (!farm) {
         return (
             <View style={styles.container}>
                 <View style={styles.header}>
                     <TouchableOpacity
                         style={styles.backButton}
-                        onPress={() => router.back()}
+                        onPress={() => router.replace("/vaccinationAgentMenu/farmsAndAnimals/farmsView")}
                         activeOpacity={0.7}
                     >
                         <Icon name="arrow-left" size={24} color={COLORS.forestGreen} />
@@ -141,7 +157,7 @@ export default function FarmDetails() {
             <View style={styles.header}>
                 <TouchableOpacity
                     style={styles.backButton}
-                    onPress={() => router.back()}
+                    onPress={() => router.replace("/vaccinationAgentMenu/farmsAndAnimals/farmsView")}
                     activeOpacity={0.7}
                 >
                     <Icon name="arrow-left" size={24} color={COLORS.forestGreen} />
@@ -171,17 +187,38 @@ export default function FarmDetails() {
                     <FlatList
                         data={animals}
                         renderItem={({ item }) => (
-                            <View style={styles.animalItem}>
+                            <TouchableOpacity
+                                style={styles.animalItem}
+                                onPress={() => handleNavigateToAnimalDetails(item.id)}
+                                activeOpacity={0.7}
+                            >
                                 <View style={styles.animalHeader}>
                                     <Icon name="paw" size={20} color={COLORS.forestGreen} style={styles.animalIcon} />
-                                    <Text style={styles.animalName}>{item.name}</Text>
+                                    <Text style={styles.animalName}>{item.name || item.species}</Text>
                                 </View>
-                                <Text style={styles.animalDetail}>Especie: {item.species}</Text>
+                                <Text style={styles.animalDetail}>Edad: {item.age}</Text>
                                 <Text style={styles.animalDetail}>Raza: {item.breed}</Text>
-                            </View>
+                                <View style={styles.statusContainer}>
+                                    <Icon
+                                        name={item.status === "Sano" ? "heart" : "hospital-box"}
+                                        size={16}
+                                        color={item.status === "Sano" ? COLORS.forestGreen : COLORS.softBrown}
+                                        style={styles.statusIcon}
+                                    />
+                                    <Text
+                                        style={[
+                                            styles.statusText,
+                                            { color: item.status === "Sano" ? COLORS.forestGreen : COLORS.softBrown },
+                                        ]}
+                                    >
+                                        Estado: {item.status}
+                                    </Text>
+                                </View>
+                            </TouchableOpacity>
                         )}
                         keyExtractor={(item) => item.id}
                         contentContainerStyle={styles.listContainer}
+                        showsVerticalScrollIndicator={false} // Optional: hide scrollbar for cleaner look
                     />
                 )}
             </View>
@@ -203,6 +240,7 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.cream,
         paddingHorizontal: 20,
         paddingTop: 40,
+        paddingBottom: 40,
     },
     header: {
         flexDirection: "row",
@@ -254,7 +292,7 @@ const styles = StyleSheet.create({
     },
     animalsContainer: {
         width: "100%",
-        marginBottom: 20,
+        flex: 1, // Ensure FlatList takes available space
     },
     subtitleContainer: {
         flexDirection: "row",
@@ -298,6 +336,18 @@ const styles = StyleSheet.create({
         color: COLORS.darkGray,
         marginBottom: 2,
     },
+    statusContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginTop: 4,
+    },
+    statusIcon: {
+        marginRight: 6,
+    },
+    statusText: {
+        fontSize: 14,
+        fontWeight: "500",
+    },
     emptyContainer: {
         alignItems: "center",
         paddingVertical: 20,
@@ -325,9 +375,6 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 3,
-    },
-    buttonIcon: {
-        marginRight: 8,
     },
     buttonText: {
         color: COLORS.white,

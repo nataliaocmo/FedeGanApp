@@ -3,7 +3,7 @@ import { db } from "@/utils/FirebaseConfig";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import React, { useState } from "react";
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons"; // Ensure this is installed
 
 // Colores definidos
@@ -16,51 +16,73 @@ const COLORS = {
     darkGray: "#424242",
 };
 
+// Función para mostrar alertas compatible con web y móvil
+const showAlert = (title: string, message: string, onConfirm: () => void) => {
+    if (Platform.OS === "web") {
+        if (window.confirm(`${title}\n${message}`)) {
+            onConfirm();
+        }
+    } else {
+        Alert.alert(title, message, [{ text: "OK", onPress: onConfirm }]);
+    }
+};
+
 export default function AnimalRegister() {
     const { farmId } = useLocalSearchParams(); // Obtener farmId de los parámetros
-    //const [name, setName] = useState("");
     const [species, setSpecies] = useState("");
     const [breed, setBreed] = useState("");
     const [age, setAge] = useState("");
     const [medicalHistory, setMedicalHistory] = useState("");
-    const [quantity, setQuantity] = useState(1); // Nuevo campo para cantidad
+    const [quantity, setQuantity] = useState(1); // Campo para cantidad
+    const [status, setStatus] = useState<"Sano" | "Enfermo" | "">(""); // Estado para Sano/Enfermo
+    const [disease, setDisease] = useState(""); // Campo para enfermedad
     const router = useRouter();
     const { user } = useAuth();
 
     const handleRegisterAnimal = async () => {
-        if (!species || !breed || !age || !medicalHistory || !quantity) {
-            Alert.alert("Error", "Por favor completa todos los campos.");
+        if (!species || !breed || !age || !medicalHistory || !quantity || !status) {
+            showAlert("Error", "Por favor completa todos los campos obligatorios.", () => {});
+            return;
+        }
+
+        if (status === "Enfermo" && !disease.trim()) {
+            showAlert("Error", "Por favor especifica la enfermedad.", () => {});
             return;
         }
 
         if (!user) {
-            Alert.alert("Error", "Debes estar autenticado para registrar un animal.");
+            showAlert("Error", "Debes estar autenticado para registrar un animal.", () => {});
             return;
         }
 
         if (typeof farmId !== "string") {
-            Alert.alert("Error", "ID de finca inválido.");
+            showAlert("Error", "ID de finca inválido.", () => router.back());
             return;
         }
 
         try {
             await addDoc(collection(db, "animals"), {
-                //name,
                 species,
                 breed,
                 age: Number(age),
                 medicalHistory,
-                quantity, 
+                status,
+                disease: status === "Enfermo" ? disease : null, // Guardar enfermedad solo si está enfermo
+                quantity,
                 farmId,
                 createdAt: serverTimestamp(),
                 createdBy: user.uid,
             });
 
-            Alert.alert("Éxito", "Animal registrado correctamente.");
-            router.back(); // Vuelve a farmDetails
+            showAlert("Éxito", "Animal registrado correctamente.", () => {
+                router.push({
+                    pathname: "/vaccinationAgentMenu/farmsAndAnimals/farmDetails/[farmId]",
+                    params: { farmId },
+                });
+            });
         } catch (error) {
             console.error("Error al registrar animal:", error);
-            Alert.alert("Error", "No se pudo registrar el animal.");
+            showAlert("Error", "No se pudo registrar el animal.", () => {});
         }
     };
 
@@ -75,23 +97,9 @@ export default function AnimalRegister() {
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.title}>Registro de Animales</Text>
+                <Text style={styles.title}>Registro de animales</Text>
             </View>
             <View style={styles.formContainer}>
-                {/* <View style={styles.inputContainer}>
-                    <View style={styles.inputHeader}>
-                        <Icon name="paw" size={20} color={COLORS.forestGreen} style={styles.inputIcon} />
-                        <Text style={styles.label}>Nombre</Text>
-                    </View>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Ej. Luna"
-                        value={name}
-                        onChangeText={setName}
-                        placeholderTextColor={COLORS.softBrown}
-                    />
-                </View> */}
-
                 <View style={styles.inputContainer}>
                     <View style={styles.inputHeader}>
                         <Icon name="cow" size={20} color={COLORS.forestGreen} style={styles.inputIcon} />
@@ -123,7 +131,7 @@ export default function AnimalRegister() {
                 <View style={styles.inputContainer}>
                     <View style={styles.inputHeader}>
                         <Icon name="calendar" size={20} color={COLORS.forestGreen} style={styles.inputIcon} />
-                        <Text style={styles.label}>Edad (años)</Text>
+                        <Text style={styles.label}>Edad promedio (años)</Text>
                     </View>
                     <TextInput
                         style={styles.input}
@@ -150,6 +158,67 @@ export default function AnimalRegister() {
                         placeholderTextColor={COLORS.softBrown}
                     />
                 </View>
+
+                <View style={styles.inputContainer}>
+                    <View style={styles.inputHeader}>
+                        <Icon name="heart-pulse" size={20} color={COLORS.forestGreen} style={styles.inputIcon} />
+                        <Text style={styles.label}>Estado de Salud</Text>
+                    </View>
+                    <View style={styles.statusContainer}>
+                        <TouchableOpacity
+                            style={[
+                                styles.statusButton,
+                                status === "Sano" && styles.statusButtonSelected,
+                            ]}
+                            onPress={() => setStatus("Sano")}
+                            activeOpacity={0.7}
+                        >
+                            <Text
+                                style={[
+                                    styles.statusButtonText,
+                                    status === "Sano" && styles.statusButtonTextSelected,
+                                ]}
+                            >
+                                Sano
+                            </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[
+                                styles.statusButton,
+                                status === "Enfermo" && styles.statusButtonSelected,
+                            ]}
+                            onPress={() => setStatus("Enfermo")}
+                            activeOpacity={0.7}
+                        >
+                            <Text
+                                style={[
+                                    styles.statusButtonText,
+                                    status === "Enfermo" && styles.statusButtonTextSelected,
+                                ]}
+                            >
+                                Enfermo
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                {status === "Enfermo" && (
+                    <View style={styles.inputContainer}>
+                        <View style={styles.inputHeader}>
+                            <Icon name="hospital-box" size={20} color={COLORS.forestGreen} style={styles.inputIcon} />
+                            <Text style={styles.label}>Enfermedad</Text>
+                        </View>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Ej. Fiebre aftosa"
+                            value={disease}
+                            onChangeText={setDisease}
+                            placeholderTextColor={COLORS.softBrown}
+                            multiline
+                            numberOfLines={2}
+                        />
+                    </View>
+                )}
 
                 <View style={styles.inputContainer}>
                     <View style={styles.inputHeader}>
@@ -205,11 +274,6 @@ const styles = StyleSheet.create({
         marginBottom: 24,
         position: "relative",
     },
-    backButton: {
-        position: "absolute",
-        left: 0,
-        padding: 8,
-    },
     title: {
         fontSize: 26,
         fontWeight: "700",
@@ -252,36 +316,32 @@ const styles = StyleSheet.create({
         shadowRadius: 2,
         elevation: 2,
     },
-    button: {
+    statusContainer: {
         flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: COLORS.forestGreen,
-        paddingVertical: 12,
-        paddingHorizontal: 20,
-        borderRadius: 12,
-        width: "100%",
-        marginTop: 24,
-        shadowColor: COLORS.darkGray,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
+        justifyContent: "space-between",
     },
-    buttonIcon: {
-        marginRight: 8,
-    },
-    buttonText: {
-        color: COLORS.white,
-        fontSize: 16,
-        fontWeight: "500",
+    statusButton: {
         flex: 1,
-        textAlign: "center",
+        paddingVertical: 10,
+        marginHorizontal: 5,
+        backgroundColor: COLORS.white,
+        borderColor: COLORS.lightGreen,
+        borderWidth: 1,
+        borderRadius: 12,
+        alignItems: "center",
     },
-    backText: {
-        marginTop: 20,
-        color: COLORS.softBrown,
-        fontSize: 14,
-        textDecorationLine: "underline",
+    statusButtonSelected: {
+        backgroundColor: COLORS.lightGreen,
+        borderColor: COLORS.forestGreen,
+    },
+    statusButtonText: {
+        fontSize: 16,
+        color: COLORS.darkGray,
+        fontWeight: "500",
+    },
+    statusButtonTextSelected: {
+        color: COLORS.forestGreen,
+        fontWeight: "600",
     },
     quantityContainer: {
         flexDirection: "row",
@@ -302,5 +362,33 @@ const styles = StyleSheet.create({
         color: COLORS.darkGray,
         fontWeight: "600",
         marginHorizontal: 20,
+    },
+    button: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: COLORS.forestGreen,
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 12,
+        width: "100%",
+        marginTop: 24,
+        shadowColor: COLORS.darkGray,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    buttonText: {
+        color: COLORS.white,
+        fontSize: 16,
+        fontWeight: "500",
+        flex: 1,
+        textAlign: "center",
+    },
+    backText: {
+        marginTop: 20,
+        color: COLORS.softBrown,
+        fontSize: 14,
+        textDecorationLine: "underline",
     },
 });
