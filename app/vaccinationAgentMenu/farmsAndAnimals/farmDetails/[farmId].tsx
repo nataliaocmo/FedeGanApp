@@ -1,9 +1,10 @@
 import { db } from "@/utils/FirebaseConfig";
+import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { collection, deleteDoc, doc, getDoc, onSnapshot, query, where } from "firebase/firestore";
+import { addDoc, collection, deleteDoc, doc, getDoc, onSnapshot, query, where } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import { Alert, FlatList, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import Icon from "react-native-vector-icons/MaterialCommunityIcons"; // Ensure this is installed
+import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 
 // Colores definidos
 const COLORS = {
@@ -13,6 +14,7 @@ const COLORS = {
     cream: "#F1F8E9",
     white: "#FFFFFF",
     darkGray: "#424242",
+    yellow: "#FFB300", // Nuevo color amarillo
 };
 
 interface Farm {
@@ -26,7 +28,7 @@ interface Farm {
 
 interface Animal {
     id: string;
-    name?: string; // Optional, as it's commented out in animalRegister.tsx
+    name?: string;
     species: string;
     breed: string;
     age: number;
@@ -57,7 +59,12 @@ export default function FarmDetails() {
     const { farmId } = useLocalSearchParams();
     const [farm, setFarm] = useState<Farm | null>(null);
     const [animals, setAnimals] = useState<Animal[]>([]);
+    const [isOutbreakRegistered, setIsOutbreakRegistered] = useState(false); // Nuevo estado
     const router = useRouter();
+
+    // Contar animales enfermos
+    const sickAnimalsCount = animals.filter((animal) => animal.status === "Enfermo").length;
+    const showOutbreakButton = sickAnimalsCount >= 2;
 
     useEffect(() => {
         console.log("Parámetros recibidos, farmId:", farmId);
@@ -86,7 +93,26 @@ export default function FarmDetails() {
             }
         };
 
+        const checkOutbreak = async () => {
+            if (typeof farmId !== "string" || !farmId) return;
+            try {
+                console.log("Verificando brote existente para farmId:", farmId);
+                const q = query(collection(db, "outbreaks"), where("farmId", "==", farmId));
+                const unsubscribe = onSnapshot(q, (snapshot) => {
+                    const hasOutbreak = !snapshot.empty;
+                    console.log("Brote existente:", hasOutbreak);
+                    setIsOutbreakRegistered(hasOutbreak);
+                }, (error) => {
+                    console.error("Error al verificar brote:", error.message, error.code);
+                });
+                return () => unsubscribe();
+            } catch (error: any) {
+                console.error("Error al configurar listener de brote:", error.message);
+            }
+        };
+
         fetchFarm();
+        checkOutbreak();
 
         // Cargar animales
         if (typeof farmId === "string") {
@@ -154,6 +180,114 @@ export default function FarmDetails() {
                 }
             }
         );
+    };
+
+    const handleRegisterOutbreak = async () => {
+        console.log("Entraste al brote");
+        if (typeof farmId !== "string" || !farmId) {
+            console.error("ID de finca inválido:", farmId);
+            showAlert("Error", "ID de finca inválido.", () => {});
+            return;
+        }
+
+        // Definir tipo para location
+        let location: Location.LocationObject;
+
+        // Obtener permisos de ubicación (móvil)
+        if (Platform.OS !== "web") {
+            console.log("Entraste al if (móvil)");
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            console.log("Estado de permisos:", status);
+            if (status !== "granted") {
+                showAlert("Error", "Permiso de ubicación denegado.", () => {});
+                return;
+            }
+
+            try {
+                location = await Location.getCurrentPositionAsync({});
+                console.log("Ubicación obtenida (móvil):", location.coords);
+            } catch (error: any) {
+                console.error("Error al obtener ubicación (móvil):", error.message);
+                showAlert("Error", "No se pudo obtener la ubicación.", () => {});
+                return;
+            }
+        } else {
+            console.log("Entraste al else (web)");
+            // Geolocalización en web
+            try {
+                console.log("Entraste al try (web)");
+                location = await new Promise<Location.LocationObject>((resolve, reject) => {
+                    if (!navigator.geolocation) {
+                        console.log("Geolocalización no soportada por el navegador");
+                        reject(new Error("Geolocalización no soportada por el navegador."));
+                        return;
+                    }
+                    console.log("Solicitando geolocalización en navegador");
+                    const timeoutId = setTimeout(() => {
+                        console.log("Timeout de geolocalización alcanzado");
+                        reject(new Error("Tiempo de espera agotado para obtener la ubicación."));
+                    }, 10000); // 10 segundos de timeout
+
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                            console.log("Geolocalización exitosa, posición:", position.coords);
+                            clearTimeout(timeoutId);
+                            resolve({
+                                coords: {
+                                    latitude: position.coords.latitude,
+                                    longitude: position.coords.longitude,
+                                    altitude: null,
+                                    accuracy: position.coords.accuracy,
+                                    altitudeAccuracy: null,
+                                    heading: null,
+                                    speed: null,
+                                },
+                                timestamp: position.timestamp,
+                            });
+                        },
+                        (error) => {
+                            console.log("Error en geolocalización:", error.message, error.code);
+                            clearTimeout(timeoutId);
+                            reject(error);
+                        },
+                        { timeout: 10000, maximumAge: 0, enableHighAccuracy: true }
+                    );
+                    console.log("Solicitud de geolocalización enviada");
+                });
+                console.log("Ubicación obtenida (web):", location.coords);
+            } catch (error: any) {
+                console.error("Error al obtener ubicación en web:", error.message);
+                showAlert("Error", `No se pudo obtener la ubicación en el navegador: ${error.message}`, () => {});
+                return;
+            }
+        }
+
+        console.log("Saliste del try");
+        const { latitude, longitude } = location.coords;
+
+        // Obtener enfermedades únicas de animales enfermos
+        const diseases = Array.from(
+            new Set(animals.filter((a) => a.status === "Enfermo" && a.disease).map((a) => a.disease))
+        );
+
+        try {
+            console.log("Registrando brote, farmId:", farmId, "Coordenadas:", { latitude, longitude });
+            await addDoc(collection(db, "outbreaks"), {
+                farmId,
+                latitude,
+                longitude,
+                diseases,
+                sickAnimalsCount,
+                createdAt: new Date(),
+                createdBy: "vaccinationAgent", // Reemplazar con user.uid si usas autenticación
+            });
+            console.log("Brote registrado correctamente.");
+            setIsOutbreakRegistered(true); // Actualizar estado
+            showAlert("Éxito", "Brote registrado correctamente.", () => {});
+        } catch (error: any) {
+            console.error("Error al registrar brote:", error.message, error.code);
+            showAlert("Error", "No se pudo registrar el brote.", () => {});
+        }
     };
 
     if (!farm) {
@@ -248,7 +382,7 @@ export default function FarmDetails() {
                         )}
                         keyExtractor={(item) => item.id}
                         contentContainerStyle={styles.listContainer}
-                        showsVerticalScrollIndicator={false} // Optional: hide scrollbar for cleaner look
+                        showsVerticalScrollIndicator={false}
                     />
                 )}
             </View>
@@ -260,6 +394,24 @@ export default function FarmDetails() {
             >
                 <Text style={styles.buttonText}>Registrar nuevo animal</Text>
             </TouchableOpacity>
+
+            {showOutbreakButton && (
+                <TouchableOpacity
+                    style={[styles.button, isOutbreakRegistered ? styles.registeredButton : styles.outbreakButton]}
+                    onPress={isOutbreakRegistered ? () => {} : handleRegisterOutbreak}
+                    activeOpacity={0.7}
+                >
+                    <Icon
+                        name={isOutbreakRegistered ? "check-circle-outline" : "virus-outline"}
+                        size={20}
+                        color={COLORS.white}
+                        style={styles.buttonIcon}
+                    />
+                    <Text style={styles.buttonText}>
+                        {isOutbreakRegistered ? "Brote registrado" : "Registrar brote"}
+                    </Text>
+                </TouchableOpacity>
+            )}
         </View>
     );
 }
@@ -322,7 +474,7 @@ const styles = StyleSheet.create({
     },
     animalsContainer: {
         width: "100%",
-        flex: 1, // Ensure FlatList takes available space
+        flex: 1,
     },
     subtitleContainer: {
         flexDirection: "row",
@@ -408,6 +560,7 @@ const styles = StyleSheet.create({
     button: {
         flexDirection: "row",
         alignItems: "center",
+        justifyContent: "center",
         backgroundColor: COLORS.forestGreen,
         paddingVertical: 12,
         paddingHorizontal: 20,
@@ -418,6 +571,20 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 3,
+        marginBottom: 12,
+        textAlign: "center",
+    },
+    outbreakButton: {
+        backgroundColor: COLORS.softBrown,
+        textAlign: "center",
+    },
+    registeredButton: {
+        backgroundColor: COLORS.yellow,
+        textAlign: "center",
+    },
+    buttonIcon: {
+        marginRight: 8,
+        textAlign: "center",
     },
     buttonText: {
         color: COLORS.white,

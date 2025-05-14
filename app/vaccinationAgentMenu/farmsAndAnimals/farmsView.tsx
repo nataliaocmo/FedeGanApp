@@ -171,7 +171,7 @@ export default function FarmsView() {
             <View style={styles.header}>
                 <TouchableOpacity
                     style={styles.backButton}
-                    onPress={() => router.back()}
+                    onPress={() => router.replace("/vaccinationAgentMenu")}
                     activeOpacity={0.7}
                 >
                     <Icon name="arrow-left" size={24} color={COLORS.forestGreen} />
