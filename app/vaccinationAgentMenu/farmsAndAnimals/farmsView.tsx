@@ -162,7 +162,6 @@ export default function FarmsView() {
                 activeOpacity={0.7}
             >
                 <Icon name="delete-outline" size={20} color={COLORS.white} />
-                <Text style={styles.deleteButtonText}>Eliminar</Text>
             </TouchableOpacity>
         </TouchableOpacity>
     );
@@ -262,7 +261,6 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
         paddingHorizontal: 12,
         borderRadius: 8,
-        marginTop: 12,
         alignSelf: "flex-end",
     },
     deleteButtonText: {

@@ -1,6 +1,6 @@
 import { db } from "@/utils/FirebaseConfig";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { collection, doc, getDoc, onSnapshot, query, where } from "firebase/firestore";
+import { collection, deleteDoc, doc, getDoc, onSnapshot, query, where } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import { Alert, FlatList, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons"; // Ensure this is installed
@@ -46,7 +46,10 @@ const showAlert = (title: string, message: string, onConfirm: () => void) => {
             onConfirm();
         }
     } else {
-        Alert.alert(title, message, [{ text: "OK", onPress: onConfirm }]);
+        Alert.alert(title, message, [
+            { text: "Cancelar", style: "cancel" },
+            { text: "OK", onPress: onConfirm },
+        ]);
     }
 };
 
@@ -135,6 +138,24 @@ export default function FarmDetails() {
         });
     };
 
+    const handleDeleteAnimal = (animalId: string, animalName: string | undefined) => {
+        showAlert(
+            "Confirmar Eliminación",
+            `¿Estás seguro de que deseas eliminar ${animalName || "este animal"}? Esta acción no se puede deshacer.`,
+            async () => {
+                try {
+                    console.log("Eliminando animal, ID:", animalId);
+                    await deleteDoc(doc(db, "animals", animalId));
+                    console.log("Animal eliminado, ID:", animalId);
+                    showAlert("Éxito", "Animal eliminado correctamente.", () => {});
+                } catch (error: any) {
+                    console.error("Error al eliminar animal:", error.message, error.code);
+                    showAlert("Error", "No se pudo eliminar el animal.", () => {});
+                }
+            }
+        );
+    };
+
     if (!farm) {
         return (
             <View style={styles.container}>
@@ -187,34 +208,43 @@ export default function FarmDetails() {
                     <FlatList
                         data={animals}
                         renderItem={({ item }) => (
-                            <TouchableOpacity
-                                style={styles.animalItem}
-                                onPress={() => handleNavigateToAnimalDetails(item.id)}
-                                activeOpacity={0.7}
-                            >
-                                <View style={styles.animalHeader}>
-                                    <Icon name="paw" size={20} color={COLORS.forestGreen} style={styles.animalIcon} />
-                                    <Text style={styles.animalName}>{item.name || item.species}</Text>
-                                </View>
-                                <Text style={styles.animalDetail}>Edad: {item.age}</Text>
-                                <Text style={styles.animalDetail}>Raza: {item.breed}</Text>
-                                <View style={styles.statusContainer}>
-                                    <Icon
-                                        name={item.status === "Sano" ? "heart" : "hospital-box"}
-                                        size={16}
-                                        color={item.status === "Sano" ? COLORS.forestGreen : COLORS.softBrown}
-                                        style={styles.statusIcon}
-                                    />
-                                    <Text
-                                        style={[
-                                            styles.statusText,
-                                            { color: item.status === "Sano" ? COLORS.forestGreen : COLORS.softBrown },
-                                        ]}
-                                    >
-                                        Estado: {item.status}
-                                    </Text>
-                                </View>
-                            </TouchableOpacity>
+                            <View style={styles.animalItem}>
+                                <TouchableOpacity
+                                    style={styles.animalContent}
+                                    onPress={() => handleNavigateToAnimalDetails(item.id)}
+                                    activeOpacity={0.7}
+                                >
+                                    <View style={styles.animalHeader}>
+                                        <Icon name="paw" size={20} color={COLORS.forestGreen} style={styles.animalIcon} />
+                                        <Text style={styles.animalName}>{item.name || item.species}</Text>
+                                    </View>
+                                    <Text style={styles.animalDetail}>Raza: {item.breed}</Text>
+                                    <Text style={styles.animalDetail}>Cantidad: {item.quantity}</Text>
+                                    <View style={styles.statusContainer}>
+                                        <Icon
+                                            name={item.status === "Sano" ? "heart" : "hospital-box"}
+                                            size={16}
+                                            color={item.status === "Sano" ? COLORS.forestGreen : COLORS.softBrown}
+                                            style={styles.statusIcon}
+                                        />
+                                        <Text
+                                            style={[
+                                                styles.statusText,
+                                                { color: item.status === "Sano" ? COLORS.forestGreen : COLORS.softBrown },
+                                            ]}
+                                        >
+                                            Estado: {item.status}
+                                        </Text>
+                                    </View>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={styles.deleteButton}
+                                    onPress={() => handleDeleteAnimal(item.id, item.name || item.species)}
+                                    activeOpacity={0.7}
+                                >
+                                    <Icon name="trash-can-outline" size={20} color={COLORS.softBrown} />
+                                </TouchableOpacity>
+                            </View>
                         )}
                         keyExtractor={(item) => item.id}
                         contentContainerStyle={styles.listContainer}
@@ -308,6 +338,8 @@ const styles = StyleSheet.create({
         color: COLORS.forestGreen,
     },
     animalItem: {
+        flexDirection: "row",
+        alignItems: "center",
         backgroundColor: COLORS.white,
         padding: 12,
         borderRadius: 12,
@@ -317,6 +349,9 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 3,
+    },
+    animalContent: {
+        flex: 1,
     },
     animalHeader: {
         flexDirection: "row",
@@ -347,6 +382,14 @@ const styles = StyleSheet.create({
     statusText: {
         fontSize: 14,
         fontWeight: "500",
+    },
+    deleteButton: {
+        padding: 8,
+        backgroundColor: COLORS.white,
+        borderRadius: 8,
+        borderColor: COLORS.softBrown,
+        borderWidth: 1,
+        marginLeft: 8,
     },
     emptyContainer: {
         alignItems: "center",
