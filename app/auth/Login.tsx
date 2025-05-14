@@ -1,5 +1,8 @@
 // app/auth/Login.tsx
+import { useAuth } from "@/context/authContext/AuthContext"; // Asegúrate de que este sea el path correcto
+import { auth, db } from "@/utils/FirebaseConfig";
 import { useRouter } from "expo-router";
+import { doc, getDoc } from "firebase/firestore";
 import React, { useState } from "react";
 import {
     Alert,
@@ -29,50 +32,79 @@ export default function Login() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const router = useRouter();
+    const { login } = useAuth();
 
-    const handleLogin = () => {
+    const handleLogin = async () => {
         if (!email || !password) {
-        Alert.alert("Error", "Por favor ingresa todos los campos");
-        return;
+            Alert.alert("Error", "Por favor ingresa todos los campos");
+            return;
         }
 
-        // Aquí llamas a Firebase Auth si deseas
-        // signInWithEmailAndPassword(auth, email, password)...
+        const success = await login(email, password);
+        if (!success) {
+            Alert.alert("Error", "Credenciales inválidas");
+            return;
+        }
 
-        Alert.alert("Login exitoso");
-        router.push("/"); // Cambia por tu pantalla principal
+        try {
+            // Obtener el documento del usuario por UID
+            const userDocRef = doc(db, "users", auth.currentUser!.uid);
+            const userSnap = await getDoc(userDocRef);
+
+            if (!userSnap.exists()) {
+                Alert.alert("Error", "No se encontró el perfil del usuario");
+                return;
+            }
+
+            const userData = userSnap.data();
+            const role = userData.role;
+
+            if (role === "farmManager") {
+                router.push("/farmManagerMenu");
+            } else if (role === "vaccinationAgent") {
+                router.push("/vaccinationAgentMenu");
+            } else if (role === "fedeganManager") {
+                router.push("/fedeganManagerMenu");
+            } else {
+                Alert.alert("Error", "Rol de usuario desconocido");
+            }
+
+        } catch (error) {
+            console.error("Error obteniendo datos del usuario:", error);
+            Alert.alert("Error", "Ocurrió un error al iniciar sesión");
+        }
     };
 
     return (
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-            <SafeAreaView style={styles.container}>
-                <KeyboardAvoidingView
-                    behavior={Platform.OS === "ios" ? "padding" : "height"}
-                    style={{ flex: 1 }}
-                >
+            <KeyboardAvoidingView
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                style={{ flex: 1 }}
+            >
+                <SafeAreaView style={styles.container}>
                     <Text style={styles.title}>FEDEGAN</Text>
 
                     <View style={styles.inputContainer}>
                         <Text style={styles.label}>Correo electrónico</Text>
                         <TextInput
-                        style={styles.input}
-                        placeholder="usuario@ejemplo.com"
-                        placeholderTextColor={COLORS.softBrown}
-                        keyboardType="email-address"
-                        value={email}
-                        onChangeText={setEmail}
+                            style={styles.input}
+                            placeholder="usuario@ejemplo.com"
+                            placeholderTextColor={COLORS.softBrown}
+                            keyboardType="email-address"
+                            value={email}
+                            onChangeText={setEmail}
                         />
                     </View>
 
                     <View style={styles.inputContainer}>
                         <Text style={styles.label}>Contraseña</Text>
                         <TextInput
-                        style={styles.input}
-                        placeholder="********"
-                        placeholderTextColor={COLORS.softBrown}
-                        secureTextEntry
-                        value={password}
-                        onChangeText={setPassword}
+                            style={styles.input}
+                            placeholder="********"
+                            placeholderTextColor={COLORS.softBrown}
+                            secureTextEntry
+                            value={password}
+                            onChangeText={setPassword}
                         />
                     </View>
 
@@ -82,11 +114,11 @@ export default function Login() {
 
                     <TouchableOpacity onPress={() => router.push("/auth/Register")}>
                         <Text style={styles.registerText}>
-                        ¿No tienes cuenta? <Text style={styles.link}>Regístrate</Text>
+                            ¿No tienes cuenta? <Text style={styles.link}>Regístrate</Text>
                         </Text>
                     </TouchableOpacity>
-                </KeyboardAvoidingView>
-            </SafeAreaView>
+                </SafeAreaView>
+            </KeyboardAvoidingView>
         </TouchableWithoutFeedback>
     );
 }
@@ -106,7 +138,7 @@ const styles = StyleSheet.create({
         marginBottom: 40,
     },
     inputContainer: {
-        width: "100%",
+        width: "85%",
         marginBottom: 16,
     },
     label: {
@@ -130,7 +162,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 32,
         borderRadius: 8,
         marginTop: 24,
-        width: "100%",
+        width: "85%",
     },
     buttonText: {
         color: COLORS.white,
