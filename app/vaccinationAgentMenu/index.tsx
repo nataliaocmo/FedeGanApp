@@ -2,7 +2,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
-//import  from "./farmsAndAnimals_Screen";
+import FarmsAndAnimalsMenu from "./farmsAndAnimals/menu";
 //import  from "./campaigns_Screen.tsx";
 //import  from "./settings_Screen.tsx";
 
@@ -78,7 +78,7 @@ export default function VaccinationAgentMenu() {
                 },
             })}
         >
-            <Tab.Screen name="Fincas y animales" component={FarmsAndAnimalsScreen} />
+            <Tab.Screen name="Fincas y animales" component={FarmsAndAnimalsMenu} />
             <Tab.Screen name="Campañas" component={CampaignsScreen} />
             <Tab.Screen name="Ajustes" component={SettingsScreen} />
         </Tab.Navigator>
