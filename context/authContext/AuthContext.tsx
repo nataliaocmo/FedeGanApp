@@ -14,7 +14,7 @@ interface AuthContextInterface {
 const AuthContext = createContext<AuthContextInterface | null>(null);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [setUser] = useState<any>(null);
+    const [user, setUser] = useState<any>(null);
 
     const login = async (email: string, password: string) => {
         try {
