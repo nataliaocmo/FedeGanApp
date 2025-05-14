@@ -52,7 +52,8 @@ export default function FarmsRegister() {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Registrar Nueva Finca</Text>
+            <Text style={styles.title}>Registrar Finca</Text>
+            <Text style={styles.subtitle}>Llena el formulario:</Text>
 
             <View style={styles.inputContainer}>
                 <Text style={styles.label}>Nombre de la finca</Text>
@@ -110,6 +111,13 @@ const styles = StyleSheet.create({
         fontSize: 30,
         fontWeight: "bold",
         color: COLORS.forestGreen,
+        marginBottom: 5,
+    },
+    subtitle: {
+        fontSize: 14,
+        fontWeight: "400",
+        color: COLORS.forestGreen,
+        letterSpacing: 0.5,
         marginBottom: 30,
     },
     inputContainer: {

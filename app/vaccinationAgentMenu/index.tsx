@@ -16,13 +16,6 @@ const COLORS = {
     darkGray: "#424242",
 };
 
-// Pantallas placeholders
-const FarmsAndAnimalsScreen = () => (
-    <View style={styles.screenContainer}>
-        <Text style={styles.screenText}>Fincas y animales</Text>
-    </View>
-);
-
 const CampaignsScreen = () => (
     <View style={styles.screenContainer}>
         <Text style={styles.screenText}>Campañas de vacunación</Text>

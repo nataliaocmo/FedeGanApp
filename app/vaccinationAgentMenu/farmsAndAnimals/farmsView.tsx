@@ -1,8 +1,10 @@
+import { useAuth } from "@/context/authContext/AuthContext";
 import { db } from "@/utils/FirebaseConfig";
 import { useRouter } from "expo-router";
-import { collection, onSnapshot } from "firebase/firestore";
+import { collection, deleteDoc, doc, getDoc, onSnapshot } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
-import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, FlatList, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import Icon from "react-native-vector-icons/MaterialCommunityIcons"; // Ensure this is installed
 
 // Colores definidos
 const COLORS = {
@@ -23,38 +25,153 @@ interface Farm {
     createdBy: string;
 }
 
+// Función para mostrar alertas compatible con web y móvil
+const showAlert = (
+    title: string,
+    message: string,
+    onConfirm: () => void,
+    onCancel?: () => void
+) => {
+    if (Platform.OS === "web") {
+        if (window.confirm(`${title}\n${message}`)) {
+            console.log("Confirmado en web");
+            onConfirm();
+        } else {
+            console.log("Cancelado en web");
+            onCancel?.();
+        }
+    } else {
+        Alert.alert(
+            title,
+            message,
+            [
+                { text: "Cancelar", style: "cancel", onPress: onCancel },
+                {
+                    text: "Eliminar",
+                    style: "destructive",
+                    onPress: () => {
+                        console.log("Confirmado en móvil");
+                        onConfirm();
+                    },
+                },
+            ],
+            { cancelable: true }
+        );
+    }
+};
+
 export default function FarmsView() {
+    const { user } = useAuth();
     const [farms, setFarms] = useState<Farm[]>([]);
     const router = useRouter();
 
     useEffect(() => {
-        const unsubscribe = onSnapshot(collection(db, "farms"), (snapshot) => {
-            const farmsData: Farm[] = snapshot.docs.map((doc) => ({
-                id: doc.id,
-                ...doc.data(),
-            })) as Farm[];
-            setFarms(farmsData);
-        }, (error) => {
-            console.error("Error al obtener fincas:", error);
-            Alert.alert("Error", "No se pudieron cargar las fincas.");
-        });
+        console.log("Usuario en FarmsView:", user?.uid, user?.email);
+        if (user) {
+            const checkUser = async () => {
+                const userDoc = await getDoc(doc(db, "users", user.uid));
+                console.log("Usuario:", {
+                    uid: user.uid,
+                    role: userDoc.data()?.role,
+                    email: user.email,
+                });
+            };
+            checkUser();
+        } else {
+            console.log("No hay usuario autenticado");
+        }
+
+        const unsubscribe = onSnapshot(
+            collection(db, "farms"),
+            (snapshot) => {
+                const farmsData: Farm[] = snapshot.docs.map((doc) => ({
+                    id: doc.id,
+                    ...doc.data(),
+                })) as Farm[];
+                console.log("Fincas cargadas:", farmsData);
+                setFarms(farmsData);
+            },
+            (error) => {
+                console.error("Error al obtener fincas:", error);
+                Alert.alert("Error", "No se pudieron cargar las fincas.");
+            }
+        );
 
         return () => unsubscribe();
-    }, []);
+    }, [user]);
+
+    const handleDeleteFarm = async (farmId: string, farmName: string) => {
+        console.log("Entro a la función handleDeleteFarm, ID:", farmId);
+        if (!user) {
+            showAlert("Error", "Debes estar autenticado para eliminar una finca.", () => {});
+            console.error("No hay usuario autenticado");
+            return;
+        }
+        try {
+            console.log("Intentando eliminar finca con ID:", farmId);
+            await deleteDoc(doc(db, "farms", farmId));
+            showAlert("Éxito", `Finca "${farmName}" eliminada correctamente.`, () => {});
+        } catch (error: any) {
+            console.error("Error al eliminar finca:", error.message, error.code);
+            let errorMessage = "No se pudo eliminar la finca.";
+            if (error.code === "permission-denied") {
+                errorMessage = "No tienes permiso para eliminar esta finca.";
+            } else if (error.code === "not-found") {
+                errorMessage = "La finca no existe en la base de datos.";
+            }
+            showAlert("Error", errorMessage, () => {});
+        }
+    };
 
     const renderFarmItem = ({ item }: { item: Farm }) => (
         <View style={styles.farmItem}>
-            <Text style={styles.farmName}>{item.name}</Text>
-            <Text style={styles.farmDetail}>Dirección: {item.address}</Text>
-            <Text style={styles.farmDetail}>Propietario: {item.owner}</Text>
+            <View style={styles.farmContent}>
+                <View style={styles.farmIcon}>
+                    <Icon name="barn" size={24} color={COLORS.forestGreen} />
+                </View>
+                <View style={styles.farmDetails}>
+                    <Text style={styles.farmName}>{item.name}</Text>
+                    <Text style={styles.farmDetail}>Dirección: {item.address}</Text>
+                    <Text style={styles.farmDetail}>Propietario: {item.owner}</Text>
+                </View>
+            </View>
+            <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={() => {
+                    console.log("Botón Eliminar presionado para finca:", item.name, item.id);
+                    showAlert(
+                        "Confirmar",
+                        `¿Eliminar ${item.name}?`,
+                        () => handleDeleteFarm(item.id, item.name),
+                        () => console.log("Cancelado por el usuario")
+                    );
+                }}
+                activeOpacity={0.7}
+            >
+                <Icon name="delete-outline" size={20} color={COLORS.white} />
+                <Text style={styles.deleteButtonText}>Eliminar</Text>
+            </TouchableOpacity>
         </View>
     );
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Lista de Fincas</Text>
+            <View style={styles.header}>
+                <TouchableOpacity
+                    style={styles.backButton}
+                    onPress={() => router.back()}
+                    activeOpacity={0.7}
+                >
+                    <Icon name="arrow-left" size={24} color={COLORS.forestGreen} />
+                </TouchableOpacity>
+                <Icon name="view-list-outline" size={32} color={COLORS.forestGreen} />
+                <Text style={styles.title}>Lista de Fincas</Text>
+            </View>
             {farms.length === 0 ? (
-                <Text style={styles.emptyText}>No hay fincas registradas.</Text>
+                <View style={styles.emptyContainer}>
+                    <Icon name="alert-circle-outline" size={48} color={COLORS.softBrown} />
+                    <Text style={styles.emptyText}>No hay fincas registradas</Text>
+                </View>
             ) : (
                 <FlatList
                     data={farms}
@@ -63,9 +180,6 @@ export default function FarmsView() {
                     contentContainerStyle={styles.listContainer}
                 />
             )}
-            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-                <Text style={styles.backButtonText}>Volver</Text>
-            </TouchableOpacity>
         </View>
     );
 }
@@ -74,25 +188,51 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: COLORS.cream,
-        padding: 24,
+        paddingHorizontal: 20,
+        paddingTop: 40,
+    },
+    header: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        marginBottom: 24,
+        position: "relative",
+    },
+    backButton: {
+        position: "absolute",
+        left: 0,
+        padding: 8,
     },
     title: {
-        fontSize: 30,
-        fontWeight: "bold",
+        fontSize: 26,
+        fontWeight: "700",
         color: COLORS.forestGreen,
-        marginBottom: 20,
-        textAlign: "center",
+        marginLeft: 8,
+        letterSpacing: 0.5,
     },
     farmItem: {
         backgroundColor: COLORS.white,
         padding: 16,
-        borderRadius: 8,
+        borderRadius: 12,
         marginBottom: 12,
-        borderWidth: 1,
-        borderColor: COLORS.lightGreen,
+        shadowColor: COLORS.darkGray,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    farmContent: {
+        flexDirection: "row",
+        alignItems: "center",
+    },
+    farmIcon: {
+        marginRight: 12,
+    },
+    farmDetails: {
+        flex: 1,
     },
     farmName: {
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: "600",
         color: COLORS.forestGreen,
         marginBottom: 4,
@@ -100,29 +240,37 @@ const styles = StyleSheet.create({
     farmDetail: {
         fontSize: 14,
         color: COLORS.darkGray,
+        marginBottom: 2,
+    },
+    deleteButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: COLORS.softBrown,
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 8,
+        marginTop: 12,
+        alignSelf: "flex-end",
+    },
+    deleteButtonText: {
+        color: COLORS.white,
+        fontSize: 14,
+        fontWeight: "500",
+        marginLeft: 4,
+    },
+    emptyContainer: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
     },
     emptyText: {
         fontSize: 16,
         color: COLORS.softBrown,
         textAlign: "center",
-        marginTop: 20,
+        marginTop: 12,
+        fontWeight: "500",
     },
     listContainer: {
         paddingBottom: 20,
-    },
-    backButton: {
-        backgroundColor: COLORS.forestGreen,
-        paddingVertical: 14,
-        paddingHorizontal: 32,
-        borderRadius: 8,
-        marginTop: 20,
-        alignSelf: "center",
-        width: "85%",
-    },
-    backButtonText: {
-        color: COLORS.white,
-        fontSize: 16,
-        textAlign: "center",
-        fontWeight: "600",
     },
 });
