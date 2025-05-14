@@ -2,6 +2,9 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
+//import  from "./farmsAndAnimals_Screen";
+//import  from "./campaigns_Screen.tsx";
+//import  from "./settings_Screen.tsx";
 
 // Colores definidos
 const COLORS = {
@@ -50,13 +53,19 @@ export default function VaccinationAgentMenu() {
                 },
                 tabBarActiveTintColor: COLORS.forestGreen,
                 tabBarInactiveTintColor: COLORS.darkGray,
-                tabBarLabelStyle: { fontSize: 12, fontWeight: "600" },
+                tabBarLabelStyle: { 
+                    fontSize: 12, 
+                    fontWeight: "600",
+                },
                 tabBarStyle: {
                     backgroundColor: COLORS.white,
                     borderTopColor: COLORS.lightGreen,
                     borderTopWidth: 1,
+                    height: 60, // Aumenta la altura de la barra
+                    paddingBottom: 1, // Espacio interno inferior
+                    paddingTop: 3, // Espacio interno superior (opcional)
                 },
-                tabBarIndicatorStyle: { backgroundColor: COLORS.forestGreen, height: 3 },
+                tabBarIndicatorStyle: { backgroundColor: COLORS.forestGreen, height: 4 },
                 tabBarShowIcon: true,
                 headerStyle: {
                     backgroundColor: COLORS.cream,
