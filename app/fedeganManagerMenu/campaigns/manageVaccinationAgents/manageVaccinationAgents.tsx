@@ -203,19 +203,31 @@ export default function ManageVaccinationAgents() {
             <View style={styles.agentContent}>
                 <View style={styles.detailRow}>
                     <Icon name="account" size={16} color={COLORS.darkGray} style={styles.detailIcon} />
-                    <Text style={styles.agentText}>Nombre: {item.name}</Text>
+                    <Text style={styles.agentText}>
+                        <Text style={{ fontWeight: 'bold' }}>Nombre: </Text>
+                        {item.name}
+                    </Text>
                 </View>
                 <View style={styles.detailRow}>
                     <Icon name="barn" size={16} color={COLORS.darkGray} style={styles.detailIcon} />
-                    <Text style={styles.agentText}>Fincas creadas: {item.farmCount}</Text>
+                    <Text style={styles.agentText}>
+                        <Text style={{ fontWeight: 'bold' }}>Fincas creadas:: </Text>
+                        {item.farmCount}
+                    </Text>
                 </View>
                 <View style={styles.detailRow}>
                     <Icon name="paw" size={16} color={COLORS.darkGray} style={styles.detailIcon} />
-                    <Text style={styles.agentText}>Animales registrados: {item.animalCount}</Text>
+                    <Text style={styles.agentText}>
+                        <Text style={{ fontWeight: 'bold' }}>Animales registrados: </Text>
+                        {item.animalCount}
+                    </Text>
                 </View>
                 <View style={styles.detailRow}>
-                    <Icon name="syringe" size={16} color={COLORS.darkGray} style={styles.detailIcon} />
-                    <Text style={styles.agentText}>Registros de vacunación: {item.vaccinationRecordCount}</Text>
+                    <Icon name="pill" size={16} color={COLORS.darkGray} style={styles.detailIcon} />
+                    <Text style={styles.agentText}>
+                        <Text style={{ fontWeight: 'bold' }}>Registros de vacunación: </Text>
+                        {item.vaccinationRecordCount}
+                    </Text>
                 </View>
             </View>
             <TouchableOpacity
