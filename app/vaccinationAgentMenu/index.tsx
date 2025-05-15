@@ -2,8 +2,8 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
+import CampaignMenu from "./campaigns/menu";
 import FarmsAndAnimalsMenu from "./farmsAndAnimals/menu";
-//import  from "./campaigns_Screen.tsx";
 //import  from "./settings_Screen.tsx";
 
 // Colores definidos
@@ -15,12 +15,6 @@ const COLORS = {
     white: "#FFFFFF",
     darkGray: "#424242",
 };
-
-const CampaignsScreen = () => (
-    <View style={styles.screenContainer}>
-        <Text style={styles.screenText}>Campañas de vacunación</Text>
-    </View>
-);
 
 const SettingsScreen = () => (
     <View style={styles.screenContainer}>
@@ -72,7 +66,7 @@ export default function VaccinationAgentMenu() {
             })}
         >
             <Tab.Screen name="Fincas y animales" component={FarmsAndAnimalsMenu} />
-            <Tab.Screen name="Campañas" component={CampaignsScreen} />
+            <Tab.Screen name="Campañas" component={CampaignMenu} />
             <Tab.Screen name="Ajustes" component={SettingsScreen} />
         </Tab.Navigator>
     );

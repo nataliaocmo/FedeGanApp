@@ -1,16 +1,22 @@
 import { auth, db } from "@/utils/FirebaseConfig";
 import {
     createUserWithEmailAndPassword,
+    User as FirebaseUser,
     onAuthStateChanged,
     signInWithEmailAndPassword,
     signOut,
-    User,
 } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import React, { createContext, useContext, useEffect, useState } from "react";
 
+interface CustomUser {
+    uid: string;
+    email: string | null;
+    role: "vaccinationAgent" | "fedeganManager" | "farmManager" | null;
+}
+
 interface AuthContextInterface {
-    user: User | null; // Añadimos user al contexto
+    user: CustomUser | null;
     login: (email: string, password: string) => Promise<boolean>;
     register: (userData: any) => Promise<boolean>;
     logout: () => Promise<void>;
@@ -21,13 +27,24 @@ interface AuthContextInterface {
 const AuthContext = createContext<AuthContextInterface | null>(null);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true); // Para manejar la carga inicial
+    const [user, setUser] = useState<CustomUser | null>(null);
+    const [loading, setLoading] = useState(true);
 
-    // Escuchar cambios en el estado de autenticación
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            setUser(currentUser);
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+            if (firebaseUser) {
+                // Cargar datos adicionales desde Firestore
+                const userDocRef = doc(db, "users", firebaseUser.uid);
+                const userDoc = await getDoc(userDocRef);
+                const role = userDoc.exists() ? userDoc.data().role : null;
+                setUser({
+                    uid: firebaseUser.uid,
+                    email: firebaseUser.email,
+                    role: role as "vaccinationAgent" | "fedeganManager" | "farmManager" | null,
+                });
+            } else {
+                setUser(null);
+            }
             setLoading(false);
         });
         return () => unsubscribe();
@@ -36,7 +53,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const login = async (email: string, password: string) => {
         try {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            setUser(userCredential.user);
+            const firebaseUser = userCredential.user;
+            const userDocRef = doc(db, "users", firebaseUser.uid);
+            const userDoc = await getDoc(userDocRef);
+            const role = userDoc.exists() ? userDoc.data().role : null;
+            setUser({
+                uid: firebaseUser.uid,
+                email: firebaseUser.email,
+                role: role as "vaccinationAgent" | "fedeganManager" | "farmManager" | null,
+            });
             return true;
         } catch (error) {
             console.error("Error al iniciar sesión:", error);
@@ -49,7 +74,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
             const newUser = userCredential.user;
 
-            // Guardar datos adicionales en Firestore
             await setDoc(doc(db, "users", newUser.uid), {
                 uid: newUser.uid,
                 name: userData.name,
@@ -60,7 +84,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 createdAt: new Date(),
             });
 
-            setUser(newUser);
+            setUser({
+                uid: newUser.uid,
+                email: newUser.email,
+                role: userData.role as "vaccinationAgent" | "fedeganManager" | "farmManager",
+            });
             return true;
         } catch (error) {
             console.error("Error al registrar usuario:", error);
@@ -78,19 +106,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const updateUser = async (userData: any) => {
-        // Implementar si necesitas actualizar datos del usuario
         console.log("Actualizando usuario:", userData);
     };
 
     const updateRole = async (role: "vaccinationAgent" | "fedeganManager" | "farmManager") => {
-        // Implementar si necesitas actualizar el rol
-        console.log("Actualizando rol:", role);
+        if (user) {
+            try {
+                await setDoc(doc(db, "users", user.uid), { role }, { merge: true });
+                setUser({ ...user, role });
+            } catch (error) {
+                console.error("Error al actualizar rol:", error);
+            }
+        }
     };
 
     return (
         <AuthContext.Provider
             value={{
-                user, // Exponemos user en el contexto
+                user,
                 login,
                 register,
                 logout,
@@ -98,7 +131,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 updateRole,
             }}
         >
-            {!loading && children} {/* Renderizamos hijos solo cuando no está cargando */}
+            {!loading && children}
         </AuthContext.Provider>
     );
 };
