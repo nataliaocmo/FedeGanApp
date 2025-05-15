@@ -25,7 +25,7 @@ export default function CommerceMenu() {
             </View>
             <TouchableOpacity
                 style={styles.button}
-                onPress={() => router.push("/fedeganManagerMenu/campaigns/manageCampaigns/manageCampaigns")}
+                onPress={() => router.push("/farmManagerMenu/commerce/import/import")}
                 activeOpacity={0.7}
             >
                 <Icon name="import" size={24} color={COLORS.white} style={styles.icon} />

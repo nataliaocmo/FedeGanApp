@@ -13,12 +13,21 @@ interface CustomUser {
     uid: string;
     email: string | null;
     role: "vaccinationAgent" | "fedeganManager" | "farmManager" | null;
+    farmId?: string; // Added to support farmManager
 }
 
 interface AuthContextInterface {
     user: CustomUser | null;
     login: (email: string, password: string) => Promise<boolean>;
-    register: (userData: any) => Promise<boolean>;
+    register: (userData: {
+        name: string;
+        email: string;
+        password: string;
+        phone: string;
+        birthdate: string;
+        role: "vaccinationAgent" | "fedeganManager" | "farmManager";
+        farmId?: string;
+    }) => Promise<boolean>;
     logout: () => Promise<void>;
     updateUser: (userData: any) => Promise<void>;
     updateRole: (role: "vaccinationAgent" | "fedeganManager" | "farmManager") => Promise<void>;
@@ -33,15 +42,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
             if (firebaseUser) {
-                // Cargar datos adicionales desde Firestore
                 const userDocRef = doc(db, "users", firebaseUser.uid);
                 const userDoc = await getDoc(userDocRef);
-                const role = userDoc.exists() ? userDoc.data().role : null;
-                setUser({
-                    uid: firebaseUser.uid,
-                    email: firebaseUser.email,
-                    role: role as "vaccinationAgent" | "fedeganManager" | "farmManager" | null,
-                });
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    setUser({
+                        uid: firebaseUser.uid,
+                        email: firebaseUser.email,
+                        role: userData.role as "vaccinationAgent" | "fedeganManager" | "farmManager" | null,
+                        farmId: userData.farmId, // Include farmId
+                    });
+                } else {
+                    setUser(null);
+                }
             } else {
                 setUser(null);
             }
@@ -56,11 +69,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const firebaseUser = userCredential.user;
             const userDocRef = doc(db, "users", firebaseUser.uid);
             const userDoc = await getDoc(userDocRef);
-            const role = userDoc.exists() ? userDoc.data().role : null;
+            const userData = userDoc.exists() ? userDoc.data() : {};
             setUser({
                 uid: firebaseUser.uid,
                 email: firebaseUser.email,
-                role: role as "vaccinationAgent" | "fedeganManager" | "farmManager" | null,
+                role: userData.role as "vaccinationAgent" | "fedeganManager" | "farmManager" | null,
+                farmId: userData.farmId, // Include farmId
             });
             return true;
         } catch (error) {
@@ -69,12 +83,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
-    const register = async (userData: any) => {
+    const register = async (userData: {
+        name: string;
+        email: string;
+        password: string;
+        phone: string;
+        birthdate: string;
+        role: "vaccinationAgent" | "fedeganManager" | "farmManager";
+        farmId?: string;
+    }) => {
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
             const newUser = userCredential.user;
 
-            await setDoc(doc(db, "users", newUser.uid), {
+            const userDocData = {
                 uid: newUser.uid,
                 name: userData.name,
                 email: userData.email,
@@ -82,12 +104,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 phone: userData.phone,
                 birthdate: userData.birthdate,
                 createdAt: new Date(),
-            });
+                ...(userData.farmId && { farmId: userData.farmId }), // Include farmId if present
+            };
+
+            await setDoc(doc(db, "users", newUser.uid), userDocData);
+
+            console.log(`Usuario registrado con ID: ${newUser.uid}, Datos:`, userDocData); // Log for debugging
 
             setUser({
                 uid: newUser.uid,
                 email: newUser.email,
-                role: userData.role as "vaccinationAgent" | "fedeganManager" | "farmManager",
+                role: userData.role,
+                farmId: userData.farmId, // Include farmId
             });
             return true;
         } catch (error) {

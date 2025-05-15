@@ -22,15 +22,18 @@ const COLORS = {
     darkGray: "#424242",
 };
 
-// Mapa de nombres de roles (para UI) a valores internos (para lógica y DB)
-const ROLE_MAP: { [key: string]: string } = {
+// Tipos de roles
+type Role = "vaccinationAgent" | "fedeganManager" | "farmManager";
+
+// Mapa de nombres de roles (para UI) a valores internos
+const ROLE_MAP: { [key: string]: Role } = {
     Administrador: "fedeganManager",
     Vacunador: "vaccinationAgent",
     Trabajador: "farmManager",
 };
 
 // Mapa inverso para mostrar el nombre legible en la UI
-const DISPLAY_ROLE_MAP: { [key: string]: string } = {
+const DISPLAY_ROLE_MAP: { [key in Role]: string } = {
     fedeganManager: "Administrador",
     vaccinationAgent: "Vacunador",
     farmManager: "Trabajador",
@@ -49,10 +52,10 @@ export default function Register() {
     const [phone, setPhone] = useState("");
     const [birthdate, setBirthdate] = useState("");
     const [birthdateError, setBirthdateError] = useState("");
-    const [role, setRole] = useState("farmManager");
+    const [role, setRole] = useState<Role>("farmManager");
     const [roleOptions, setRoleOptions] = useState<string[]>(["En espera..."]);
     const [farms, setFarms] = useState<Farm[]>([]);
-    const [selectedFarmId, setSelectedFarmId] = useState<string | null>(null);
+    const [selectedFarmId, setSelectedFarmId] = useState<string | undefined>(undefined);
 
     const router = useRouter();
     const { register } = useAuth();
@@ -122,8 +125,9 @@ export default function Register() {
     useEffect(() => {
         const options = getRoleOptions(email);
         setRoleOptions(options);
-        if (!options.includes(DISPLAY_ROLE_MAP[role] || "")) {
-            setRole(ROLE_MAP[options[0]] || "farmManager");
+        if (!options.includes(DISPLAY_ROLE_MAP[role])) {
+            const defaultOption = options[0];
+            setRole(ROLE_MAP[defaultOption] || "farmManager");
         }
     }, [email, role]);
 
@@ -147,9 +151,11 @@ export default function Register() {
             password,
             phone,
             birthdate,
-            role,
+            role: role as Role, // Asegurar tipo correcto
             ...(role === "farmManager" && { farmId: selectedFarmId }),
         };
+
+        console.log("Datos enviados a register:", userData);
 
         const success = await register(userData);
         if (success) {
@@ -241,9 +247,10 @@ export default function Register() {
                             key={index}
                             onPress={() => {
                                 if (option !== "En espera...") {
-                                    setRole(ROLE_MAP[option]);
-                                    if (ROLE_MAP[option] !== "farmManager") {
-                                        setSelectedFarmId(null);
+                                    const selectedRole = ROLE_MAP[option];
+                                    setRole(selectedRole);
+                                    if (selectedRole !== "farmManager") {
+                                        setSelectedFarmId(undefined);
                                     }
                                 }
                             }}
