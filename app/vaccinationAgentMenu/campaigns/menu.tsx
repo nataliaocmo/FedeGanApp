@@ -109,24 +109,46 @@ export default function CampaignMenu() {
         const isValidated = validation?.isValidated || false;
 
         return (
-            <View style={styles.outbreakItem}>
+            <View
+                style={[
+                    styles.outbreakItem,
+                    {
+                        borderColor: isValidated ? COLORS.forestGreen : COLORS.yellow,
+                        backgroundColor: isValidated
+                            ? `${COLORS.forestGreen}10` // Subtle green tint
+                            : `${COLORS.yellow}10`, // Subtle yellow tint
+                    },
+                ]}
+            >
                 <View style={styles.outbreakContent}>
-                    <Text style={styles.outbreakTitle}>
-                        Brote: {item.diseases.join(", ")}
-                    </Text>
-                    <Text style={styles.outbreakDetail}>
-                        Finca ID: {item.farmId}
-                    </Text>
-                    <Text style={styles.outbreakDetail}>
-                        Animales afectados: {item.sickAnimalsCount}
-                    </Text>
-                    <Text style={styles.outbreakDetail}>
-                        Estado: {isValidated ? "Validado" : "Pendiente"}
-                    </Text>
-                    {isValidated && validation && (
-                        <Text style={styles.recommendations}>
-                            Recomendaciones: {validation.recommendations}
+                    <View style={styles.outbreakHeader}>
+                        <Icon name="alert-circle-outline" size={20} color={COLORS.forestGreen} style={styles.icon} />
+                        <Text style={styles.outbreakTitle}>
+                            {item.diseases.join(", ")}
                         </Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                        <Icon name="barn" size={16} color={COLORS.darkGray} style={styles.detailIcon} />
+                        <Text style={styles.outbreakDetail}>Finca ID: {item.farmId}</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                        <Icon name="paw" size={16} color={COLORS.darkGray} style={styles.detailIcon} />
+                        <Text style={styles.outbreakDetail}>Animales afectados: {item.sickAnimalsCount}</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                        <Icon
+                            name={isValidated ? "check-circle-outline" : "clock-outline"}
+                            size={16}
+                            color={isValidated ? COLORS.darkGray : COLORS.darkGray}
+                            style={styles.detailIcon}
+                        />
+                        <Text style={styles.outbreakDetail}>Estado: {isValidated ? "Validado" : "Pendiente"}</Text>
+                    </View>
+                    {isValidated && validation && (
+                        <View style={styles.recommendationsContainer}>
+                            <Icon name="note-text-outline" size={16} color={COLORS.darkGray} style={styles.detailIcon} />
+                            <Text style={styles.recommendations}>Recomendaciones: {validation.recommendations}</Text>
+                        </View>
                     )}
                 </View>
                 {isValidated && (
@@ -135,7 +157,6 @@ export default function CampaignMenu() {
                         onPress={() => handleStartCampaign(item)}
                         activeOpacity={0.7}
                     >
-                        <Icon name="syringe" size={20} color={COLORS.white} />
                         <Text style={styles.buttonText}>Iniciar Campaña</Text>
                     </TouchableOpacity>
                 )}
@@ -145,10 +166,9 @@ export default function CampaignMenu() {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Brotes Pendientes</Text>
             {outbreaks.length === 0 ? (
                 <View style={styles.emptyContainer}>
-                    <Icon name="alert-circle-outline" size={32} color={COLORS.softBrown} />
+                    <Icon name="alert-circle-outline" size={48} color={COLORS.softBrown} />
                     <Text style={styles.emptyText}>No hay brotes pendientes</Text>
                 </View>
             ) : (
@@ -169,15 +189,7 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: COLORS.cream,
         paddingHorizontal: 20,
-        paddingTop: 40,
-        paddingBottom: 40,
-    },
-    title: {
-        fontSize: 28,
-        fontWeight: "700",
-        color: COLORS.forestGreen,
-        marginBottom: 20,
-        textAlign: "center",
+        paddingVertical: 20,
     },
     outbreakItem: {
         backgroundColor: COLORS.white,
@@ -189,50 +201,80 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 3,
+        borderWidth: 2, // Added for visible border
     },
     outbreakContent: {
+        marginBottom: 12,
+    },
+    outbreakHeader: {
+        flexDirection: "row",
+        alignItems: "center",
         marginBottom: 8,
     },
+    icon: {
+        marginRight: 8,
+    },
     outbreakTitle: {
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: "600",
         color: COLORS.forestGreen,
+    },
+    detailRow: {
+        flexDirection: "row",
+        alignItems: "center",
         marginBottom: 4,
+    },
+    detailIcon: {
+        marginRight: 8,
     },
     outbreakDetail: {
         fontSize: 14,
         color: COLORS.darkGray,
-        marginBottom: 4,
+    },
+    recommendationsContainer: {
+        flexDirection: "row",
+        alignItems: "flex-start",
+        marginTop: 4,
     },
     recommendations: {
         fontSize: 14,
-        color: COLORS.softBrown,
+        color: COLORS.darkGray,
         fontStyle: "italic",
+        flex: 1,
+        fontWeight: "600"
     },
     campaignButton: {
         flexDirection: "row",
         alignItems: "center",
         backgroundColor: COLORS.forestGreen,
-        paddingVertical: 12,
+        paddingVertical: 10,
         paddingHorizontal: 16,
         borderRadius: 12,
         justifyContent: "center",
+        shadowColor: COLORS.darkGray,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    buttonIcon: {
+        marginRight: 8,
     },
     buttonText: {
         color: COLORS.white,
-        fontSize: 16,
-        fontWeight: "500",
-        marginLeft: 8,
+        fontSize: 14,
+        fontWeight: "600",
     },
     emptyContainer: {
+        flex: 1,
+        justifyContent: "center",
         alignItems: "center",
-        paddingVertical: 20,
     },
     emptyText: {
-        fontSize: 14,
+        fontSize: 16,
         color: COLORS.softBrown,
         textAlign: "center",
-        marginTop: 8,
+        marginTop: 12,
         fontWeight: "500",
     },
     listContainer: {

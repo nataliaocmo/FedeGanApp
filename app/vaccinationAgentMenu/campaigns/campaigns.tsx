@@ -94,43 +94,55 @@ export default function CampaignForm() {
                 >
                     <Icon name="arrow-left" size={24} color={COLORS.forestGreen} />
                 </TouchableOpacity>
-                <Text style={styles.title}>Crear Campaña de Vacunación</Text>
+                <Text style={styles.title}>Campaña</Text>
             </View>
-
             <View style={styles.form}>
-                <Text style={styles.label}>Tipo de Vacuna</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Ej. Fiebre aftosa"
-                    placeholderTextColor={COLORS.darkGray}
-                    value={vaccineType}
-                    onChangeText={setVaccineType}
-                />
-
-                <Text style={styles.label}>Número de Animales</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Ej. 50"
-                    placeholderTextColor={COLORS.darkGray}
-                    value={targetAnimals}
-                    onChangeText={setTargetAnimals}
-                    keyboardType="numeric"
-                />
-
-                <Text style={styles.label}>Fecha de Inicio (AAAA-MM-DD)</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Ej. 2025-05-15"
-                    placeholderTextColor={COLORS.darkGray}
-                    value={startDate}
-                    onChangeText={setStartDate}
-                />
-
+                <View style={styles.inputContainer}>
+                    <View style={styles.inputHeader}>
+                        <Icon name="syringe" size={20} color={COLORS.forestGreen} style={styles.inputIcon} />
+                        <Text style={styles.label}>Tipo de Vacuna</Text>
+                    </View>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Ej. Fiebre aftosa"
+                        placeholderTextColor={COLORS.softBrown}
+                        value={vaccineType}
+                        onChangeText={setVaccineType}
+                    />
+                </View>
+                <View style={styles.inputContainer}>
+                    <View style={styles.inputHeader}>
+                        <Icon name="paw" size={20} color={COLORS.forestGreen} style={styles.inputIcon} />
+                        <Text style={styles.label}>Número de Animales</Text>
+                    </View>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Ej. 50"
+                        placeholderTextColor={COLORS.softBrown}
+                        value={targetAnimals}
+                        onChangeText={setTargetAnimals}
+                        keyboardType="numeric"
+                    />
+                </View>
+                <View style={styles.inputContainer}>
+                    <View style={styles.inputHeader}>
+                        <Icon name="calendar" size={20} color={COLORS.forestGreen} style={styles.inputIcon} />
+                        <Text style={styles.label}>Fecha de Inicio (AAAA-MM-DD)</Text>
+                    </View>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Ej. 2025-05-15"
+                        placeholderTextColor={COLORS.softBrown}
+                        value={startDate}
+                        onChangeText={setStartDate}
+                    />
+                </View>
                 <TouchableOpacity
                     style={styles.submitButton}
                     onPress={handleSubmitCampaign}
                     activeOpacity={0.7}
                 >
+                    <Icon name="check-circle-outline" size={20} color={COLORS.white} style={styles.buttonIcon} />
                     <Text style={styles.buttonText}>Crear Campaña</Text>
                 </TouchableOpacity>
             </View>
@@ -158,7 +170,7 @@ const styles = StyleSheet.create({
         padding: 8,
     },
     title: {
-        fontSize: 28,
+        fontSize: 26,
         fontWeight: "700",
         color: COLORS.forestGreen,
         letterSpacing: 0.5,
@@ -173,31 +185,57 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
         elevation: 3,
     },
+    inputContainer: {
+        marginBottom: 16,
+    },
+    inputHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginBottom: 6,
+    },
+    inputIcon: {
+        marginRight: 8,
+    },
     label: {
-        fontSize: 16,
-        fontWeight: "600",
-        color: COLORS.forestGreen,
-        marginBottom: 8,
+        fontSize: 14,
+        fontWeight: "500",
+        color: COLORS.darkGray,
     },
     input: {
-        backgroundColor: COLORS.cream,
+        backgroundColor: COLORS.white,
         borderColor: COLORS.darkGray,
         borderWidth: 1,
-        borderRadius: 8,
+        borderRadius: 12,
         padding: 12,
         fontSize: 14,
         color: COLORS.darkGray,
-        marginBottom: 16,
+        shadowColor: COLORS.darkGray,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
     },
     submitButton: {
+        flexDirection: "row",
+        alignItems: "center",
         backgroundColor: COLORS.forestGreen,
         paddingVertical: 12,
+        paddingHorizontal: 20,
         borderRadius: 12,
-        alignItems: "center",
+        shadowColor: COLORS.darkGray,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    buttonIcon: {
+        marginRight: 8,
     },
     buttonText: {
         color: COLORS.white,
         fontSize: 16,
         fontWeight: "500",
+        flex: 1,
+        textAlign: "center",
     },
 });
