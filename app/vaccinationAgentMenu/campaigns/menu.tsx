@@ -1,7 +1,7 @@
 import { useAuth } from "@/context/authContext/AuthContext";
 import { db } from "@/utils/FirebaseConfig";
 import { useRouter } from "expo-router";
-import { collection, onSnapshot, query } from "firebase/firestore";
+import { collection, doc, onSnapshot, query, updateDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import { Alert, FlatList, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
@@ -25,6 +25,7 @@ interface Outbreak {
     sickAnimalsCount: number;
     createdAt: any;
     createdBy: string;
+    status?: "planned" | "in_progress" | "completed";
 }
 
 interface Validation {
@@ -32,6 +33,17 @@ interface Validation {
     farmId: string;
     isValidated: boolean;
     recommendations: string;
+    createdAt: any;
+    createdBy: string;
+}
+
+interface Campaign {
+    id: string;
+    outbreakId: string;
+    farmId: string;
+    vaccineType: string;
+    targetAnimals: number;
+    startDate: string;
     createdAt: any;
     createdBy: string;
 }
@@ -54,6 +66,7 @@ export default function CampaignMenu() {
     const { user } = useAuth();
     const [outbreaks, setOutbreaks] = useState<Outbreak[]>([]);
     const [validations, setValidations] = useState<Validation[]>([]);
+    const [campaigns, setCampaigns] = useState<Campaign[]>([]);
     const router = useRouter();
 
     useEffect(() => {
@@ -90,9 +103,23 @@ export default function CampaignMenu() {
             console.error("Error al cargar validaciones:", error.message);
         });
 
+        // Cargar campañas
+        const qCampaigns = query(collection(db, "campaigns"));
+        const unsubscribeCampaigns = onSnapshot(qCampaigns, (snapshot) => {
+            const campaignsData = snapshot.docs.map((doc) => ({
+                id: doc.id,
+                ...doc.data(),
+            })) as Campaign[];
+            console.log("Campañas cargadas:", campaignsData);
+            setCampaigns(campaignsData);
+        }, (error) => {
+            console.error("Error al cargar campañas:", error.message);
+        });
+
         return () => {
             unsubscribeOutbreaks();
             unsubscribeValidations();
+            unsubscribeCampaigns();
         };
     }, [user]);
 
@@ -104,9 +131,81 @@ export default function CampaignMenu() {
         });
     };
 
+    const handleUpdateStatus = async (outbreakId: string, newStatus: Outbreak["status"]) => {
+        if (!user) {
+            showAlert("Error", "Usuario no autenticado.", () => {});
+            return;
+        }
+
+        showAlert(
+            "Confirmar",
+            `¿Deseas actualizar el estado a "${newStatus === 'planned' ? 'Planificada' : newStatus === 'in_progress' ? 'En Progreso' : 'Completada'}"?`,
+            async () => {
+                try {
+                    const outbreakRef = doc(db, "outbreaks", outbreakId);
+                    await updateDoc(outbreakRef, { status: newStatus });
+                    console.log(`Estado actualizado para brote ${outbreakId}: ${newStatus}`);
+                } catch (error: any) {
+                    console.error("Error al actualizar estado:", error.message);
+                    showAlert("Error", "No se pudo actualizar el estado.", () => {});
+                }
+            }
+        );
+    };
+
+    const renderTimeline = (outbreak: Outbreak) => {
+        const status = outbreak.status || "planned";
+        const stages = [
+            { key: "planned", label: "Planificada", icon: "calendar" },
+            { key: "in_progress", label: "En Progreso", icon: "play-circle-outline" },
+            { key: "completed", label: "Completada", icon: "check-circle-outline" },
+        ];
+
+        return (
+            <View style={styles.timelineContainer}>
+                {stages.map((stage, index) => {
+                    const isActive = status === stage.key;
+                    const isPast = stages.findIndex(s => s.key === status) >= index;
+                    return (
+                        <TouchableOpacity
+                            key={stage.key}
+                            style={styles.timelineStage}
+                            onPress={() => handleUpdateStatus(outbreak.id, stage.key as Outbreak["status"])}
+                            activeOpacity={0.7}
+                        >
+                            <View style={[
+                                styles.timelineIconContainer,
+                                isActive && styles.timelineIconActive,
+                            ]}>
+                                <Icon
+                                    name={stage.icon}
+                                    size={20}
+                                    color={isActive || isPast ? COLORS.forestGreen : COLORS.darkGray}
+                                />
+                                {index < stages.length - 1 && (
+                                    <View style={[
+                                        styles.timelineConnector,
+                                        isPast && styles.timelineConnectorActive,
+                                    ]} />
+                                )}
+                            </View>
+                            <Text style={[
+                                styles.timelineLabel,
+                                { color: isActive || isPast ? COLORS.forestGreen : COLORS.darkGray },
+                            ]}>
+                                {stage.label}
+                            </Text>
+                        </TouchableOpacity>
+                    );
+                })}
+            </View>
+        );
+    };
+
     const renderOutbreak = ({ item }: { item: Outbreak }) => {
         const validation = validations.find((v) => v.outbreakId === item.id);
         const isValidated = validation?.isValidated || false;
+        const hasCampaign = campaigns.some(c => c.outbreakId === item.id);
 
         return (
             <View
@@ -114,9 +213,6 @@ export default function CampaignMenu() {
                     styles.outbreakItem,
                     {
                         borderColor: isValidated ? COLORS.forestGreen : COLORS.yellow,
-                        backgroundColor: isValidated
-                            ? `${COLORS.forestGreen}10` // Subtle green tint
-                            : `${COLORS.yellow}10`, // Subtle yellow tint
                     },
                 ]}
             >
@@ -132,31 +228,33 @@ export default function CampaignMenu() {
                         <Text style={styles.outbreakDetail}>Finca ID: {item.farmId}</Text>
                     </View>
                     <View style={styles.detailRow}>
-                        <Icon name="paw" size={16} color={COLORS.darkGray} style={styles.detailIcon} />
+                        <Icon name="cow" size={16} color={COLORS.darkGray} style={styles.detailIcon} />
                         <Text style={styles.outbreakDetail}>Animales afectados: {item.sickAnimalsCount}</Text>
                     </View>
                     <View style={styles.detailRow}>
                         <Icon
                             name={isValidated ? "check-circle-outline" : "clock-outline"}
                             size={16}
-                            color={isValidated ? COLORS.darkGray : COLORS.darkGray}
+                            color={isValidated ? COLORS.forestGreen : COLORS.yellow}
                             style={styles.detailIcon}
                         />
                         <Text style={styles.outbreakDetail}>Estado: {isValidated ? "Validado" : "Pendiente"}</Text>
                     </View>
                     {isValidated && validation && (
                         <View style={styles.recommendationsContainer}>
-                            <Icon name="note-text-outline" size={16} color={COLORS.darkGray} style={styles.detailIcon} />
+                            <Icon name="note-text-outline" size={16} color={COLORS.softBrown} style={styles.detailIcon} />
                             <Text style={styles.recommendations}>Recomendaciones: {validation.recommendations}</Text>
                         </View>
                     )}
+                    {isValidated && hasCampaign && renderTimeline(item)}
                 </View>
-                {isValidated && (
+                {isValidated && !hasCampaign && (
                     <TouchableOpacity
                         style={styles.campaignButton}
                         onPress={() => handleStartCampaign(item)}
                         activeOpacity={0.7}
                     >
+                        <Icon name="syringe" size={16} color={COLORS.white} style={styles.buttonIcon} />
                         <Text style={styles.buttonText}>Iniciar Campaña</Text>
                     </TouchableOpacity>
                 )}
@@ -169,7 +267,7 @@ export default function CampaignMenu() {
             {outbreaks.length === 0 ? (
                 <View style={styles.emptyContainer}>
                     <Icon name="alert-circle-outline" size={48} color={COLORS.softBrown} />
-                    <Text style={styles.emptyText}>No hay brotes pendientes</Text>
+                    <Text style={styles.emptyText}>No hay brotes disponibles</Text>
                 </View>
             ) : (
                 <FlatList
@@ -188,20 +286,20 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: COLORS.cream,
-        paddingHorizontal: 20,
-        paddingVertical: 20,
+        paddingHorizontal: 16,
+        paddingVertical: 24,
     },
     outbreakItem: {
         backgroundColor: COLORS.white,
         padding: 16,
-        borderRadius: 12,
+        borderRadius: 16,
         marginBottom: 12,
+        borderWidth: 1.5,
         shadowColor: COLORS.darkGray,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
-        borderWidth: 2, // Added for visible border
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 6,
+        elevation: 4,
     },
     outbreakContent: {
         marginBottom: 12,
@@ -222,7 +320,7 @@ const styles = StyleSheet.create({
     detailRow: {
         flexDirection: "row",
         alignItems: "center",
-        marginBottom: 4,
+        marginBottom: 6,
     },
     detailIcon: {
         marginRight: 8,
@@ -230,18 +328,19 @@ const styles = StyleSheet.create({
     outbreakDetail: {
         fontSize: 14,
         color: COLORS.darkGray,
+        fontWeight: "500",
     },
     recommendationsContainer: {
         flexDirection: "row",
         alignItems: "flex-start",
-        marginTop: 4,
+        marginTop: 6,
+        marginBottom: 8,
     },
     recommendations: {
-        fontSize: 14,
-        color: COLORS.darkGray,
+        fontSize: 13,
+        color: COLORS.softBrown,
         fontStyle: "italic",
         flex: 1,
-        fontWeight: "600"
     },
     campaignButton: {
         flexDirection: "row",
@@ -258,7 +357,7 @@ const styles = StyleSheet.create({
         elevation: 3,
     },
     buttonIcon: {
-        marginRight: 8,
+        marginRight: 6,
     },
     buttonText: {
         color: COLORS.white,
@@ -278,6 +377,53 @@ const styles = StyleSheet.create({
         fontWeight: "500",
     },
     listContainer: {
-        paddingBottom: 20,
+        paddingBottom: 24,
+    },
+    timelineContainer: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        marginTop: 12,
+        paddingVertical: 8,
+        backgroundColor: `${COLORS.cream}80`,
+        borderRadius: 10,
+        alignItems: "center",
+        textAlign: "center",
+    },
+    timelineStage: {
+        alignItems: "center",
+        flex: 1,
+        textAlign: "center",
+    },
+    timelineIconContainer: {
+        position: "relative",
+        alignItems: "center",
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: COLORS.white,
+        justifyContent: "center",
+        textAlign: "center",
+    },
+    timelineIconActive: {
+        backgroundColor: `${COLORS.forestGreen}10`,
+        borderWidth: 1,
+        borderColor: COLORS.forestGreen,
+    },
+    timelineConnector: {
+        position: "absolute",
+        top: 14,
+        right: -38,
+        width: 36,
+        height: 2,
+        backgroundColor: `${COLORS.darkGray}50`,
+    },
+    timelineConnectorActive: {
+        backgroundColor: COLORS.forestGreen,
+    },
+    timelineLabel: {
+        fontSize: 11,
+        fontWeight: "500",
+        marginTop: 6,
+        textAlign: "center",
     },
 });

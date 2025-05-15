@@ -1,7 +1,7 @@
 import { useAuth } from "@/context/authContext/AuthContext";
 import { db } from "@/utils/FirebaseConfig";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { addDoc, collection } from "firebase/firestore";
+import { addDoc, collection, doc, updateDoc } from "firebase/firestore";
 import React, { useState } from "react";
 import { Alert, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
@@ -74,12 +74,17 @@ export default function CampaignForm() {
                 createdAt: new Date(),
                 createdBy: user.uid,
             });
-            console.log("Campaña creada correctamente.");
+
+            // Actualizar el estado del brote a "planned"
+            const outbreakRef = doc(db, "outbreaks", outbreakId as string);
+            await updateDoc(outbreakRef, { status: "planned" });
+
+            console.log("Campaña creada y estado del brote actualizado.");
             showAlert("Éxito", "Campaña creada correctamente.", () => {
                 router.back();
             });
         } catch (error: any) {
-            console.error("Error al crear campaña:", error.message);
+            console.error("Error al crear campaña o actualizar brote:", error.message);
             showAlert("Error", "No se pudo crear la campaña.", () => {});
         }
     };
