@@ -174,10 +174,10 @@ export default function FarmsView() {
                     onPress={() => router.replace("/vaccinationAgentMenu")}
                     activeOpacity={0.7}
                 >
-                    <Icon name="arrow-left" size={24} color={COLORS.forestGreen} />
+                    <Icon name="arrow-left" size={24} color={COLORS.white} />
                 </TouchableOpacity>
-                <Icon name="view-list-outline" size={32} color={COLORS.forestGreen} />
-                <Text style={styles.title}>Lista de Fincas</Text>
+                <Icon name="view-list-outline" size={32} color={COLORS.white} />
+                <Text style={styles.title}>Fincas</Text>
             </View>
             {farms.length === 0 ? (
                 <View style={styles.emptyContainer}>
@@ -209,16 +209,21 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         marginBottom: 24,
         position: "relative",
+        backgroundColor: COLORS.forestGreen,
+        paddingHorizontal: 15,
+        paddingVertical: 15,
+        borderRadius: 8,
     },
     backButton: {
         position: "absolute",
         left: 0,
         padding: 8,
+        marginLeft: 10
     },
     title: {
         fontSize: 28,
         fontWeight: "700",
-        color: COLORS.forestGreen,
+        color: COLORS.white,
         marginLeft: 8,
         letterSpacing: 0.5,
     },

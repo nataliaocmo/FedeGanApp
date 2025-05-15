@@ -1,9 +1,9 @@
 import { useAuth } from "@/context/authContext/AuthContext";
 import { db } from "@/utils/FirebaseConfig";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { addDoc, collection, doc, updateDoc } from "firebase/firestore";
-import React, { useState } from "react";
-import { Alert, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useRouter } from "expo-router";
+import { collection, doc, onSnapshot, query, updateDoc } from "firebase/firestore";
+import React, { useEffect, useState } from "react";
+import { Alert, FlatList, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 
 // Colores definidos
@@ -14,6 +14,18 @@ const COLORS = {
     white: "#FFFFFF",
     darkGray: "#424242",
 };
+
+interface Campaign {
+    id: string;
+    outbreakId: string;
+    farmId: string;
+    vaccineType: string;
+    targetAnimals: number;
+    startDate: string;
+    createdAt: any;
+    createdBy: string;
+    status: "planned" | "in_progress" | "completed";
+}
 
 // Función para mostrar alertas
 const showAlert = (title: string, message: string, onConfirm: () => void) => {
@@ -29,64 +41,173 @@ const showAlert = (title: string, message: string, onConfirm: () => void) => {
     }
 };
 
-export default function CampaignForm() {
+export default function CampaignsList() {
     const { user } = useAuth();
-    const { outbreakId, farmId } = useLocalSearchParams();
-    const [vaccineType, setVaccineType] = useState("");
-    const [targetAnimals, setTargetAnimals] = useState("");
-    const [startDate, setStartDate] = useState("");
+    const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+    const [farms, setFarms] = useState<{ [key: string]: string }>({});
+    const [outbreaks, setOutbreaks] = useState<{ [key: string]: string }>({});
     const router = useRouter();
 
-    const handleSubmitCampaign = async () => {
+    useEffect(() => {
         if (!user || user.role !== "vaccinationAgent") {
             console.error("Acceso denegado: Rol no es vaccinationAgent");
-            showAlert("Error", "No tienes permiso para crear campañas.", () => {});
+            showAlert("Error", "No tienes permiso para ver esta página.", () => {});
             return;
         }
 
-        if (!outbreakId || !farmId || !vaccineType.trim() || !targetAnimals.trim() || !startDate.trim()) {
-            console.error("Datos incompletos:", { outbreakId, farmId, vaccineType, targetAnimals, startDate });
-            showAlert("Error", "Por favor, completa todos los campos.", () => {});
+        // Cargar todas las campañas
+        const qCampaigns = query(collection(db, "campaigns"));
+        const unsubscribeCampaigns = onSnapshot(qCampaigns, (snapshot) => {
+            const campaignsData = snapshot.docs.map((doc) => ({
+                id: doc.id,
+                ...doc.data(),
+            })) as Campaign[];
+            console.log("Campañas cargadas:", campaignsData);
+            setCampaigns(campaignsData);
+        }, (error) => {
+            console.error("Error al cargar campañas:", error.message);
+            showAlert("Error", "No se pudieron cargar las campañas.", () => {});
+        });
+
+        // Cargar todas las fincas
+        const qFarms = query(collection(db, "farms"));
+        const unsubscribeFarms = onSnapshot(qFarms, (snapshot) => {
+            const farmsData = snapshot.docs.reduce((acc, doc) => {
+                const data = doc.data();
+                return { ...acc, [doc.id]: data.name || "Finca desconocida" };
+            }, {} as { [key: string]: string });
+            console.log("Fincas cargadas:", farmsData);
+            setFarms(farmsData);
+        }, (error) => {
+            console.error("Error al cargar fincas:", error.message);
+            showAlert("Error", "No se pudieron cargar las fincas.", () => {});
+        });
+
+        // Cargar todos las brotes
+        const qOutbreaks = query(collection(db, "outbreaks"));
+        const unsubscribeOutbreaks = onSnapshot(qOutbreaks, (snapshot) => {
+            const outbreaksData = snapshot.docs.reduce((acc, doc) => {
+                const data = doc.data();
+                return { ...acc, [doc.id]: data.diseases || "Brote desconocido" };
+            }, {} as { [key: string]: string });
+            console.log("Brotes cargados:", outbreaksData);
+            setOutbreaks(outbreaksData);
+        }, (error) => {
+            console.error("Error al cargar brotes:", error.message);
+            showAlert("Error", "No se pudieron cargar los brotes.", () => {});
+        });
+
+        return () => {
+            unsubscribeCampaigns();
+            unsubscribeFarms();
+            unsubscribeOutbreaks();
+        };
+    }, [user]);
+
+    const handleUpdateStatus = async (campaignId: string, newStatus: Campaign["status"]) => {
+        if (!user) {
+            showAlert("Error", "Usuario no autenticado.", () => {});
             return;
         }
 
-        const animalsCount = parseInt(targetAnimals, 10);
-        if (isNaN(animalsCount) || animalsCount <= 0) {
-            showAlert("Error", "El número de animales debe ser un número válido mayor a 0.", () => {});
-            return;
-        }
+        showAlert(
+            "Confirmar",
+            `¿Deseas actualizar el estado a "${newStatus === 'planned' ? 'Planeación' : newStatus === 'in_progress' ? 'Desarrollo' : 'Completada'}"?`,
+            async () => {
+                try {
+                    const campaignRef = doc(db, "campaigns", campaignId);
+                    await updateDoc(campaignRef, { status: newStatus });
+                    console.log(`Estado actualizado para campaña ${campaignId}: ${newStatus}`);
+                } catch (error: any) {
+                    console.error("Error al actualizar estado:", error.message);
+                    showAlert("Error", "No se pudo actualizar el estado.", () => {});
+                }
+            }
+        );
+    };
 
-        // Validar formato de fecha (YYYY-MM-DD)
-        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-        if (!dateRegex.test(startDate)) {
-            showAlert("Error", "La fecha debe estar en formato AAAA-MM-DD.", () => {});
-            return;
-        }
+    const renderTimeline = (campaign: Campaign) => {
+        const status = campaign.status || "planned";
+        const stages = [
+            { key: "planned", label: "Planeación", icon: "calendar" },
+            { key: "in_progress", label: "Desarrollo", icon: "play-circle-outline" },
+            { key: "completed", label: "Completada", icon: "check-circle-outline" },
+        ];
 
-        try {
-            console.log("Creando campaña para outbreakId:", outbreakId);
-            await addDoc(collection(db, "campaigns"), {
-                outbreakId,
-                farmId,
-                vaccineType,
-                targetAnimals: animalsCount,
-                startDate,
-                createdAt: new Date(),
-                createdBy: user.uid,
-            });
+        return (
+            <View style={styles.timelineContainer}>
+                {stages.map((stage, index) => {
+                    const isActive = status === stage.key;
+                    const isPast = stages.findIndex(s => s.key === status) >= index;
+                    return (
+                        <TouchableOpacity
+                            key={stage.key}
+                            style={styles.timelineStage}
+                            onPress={() => handleUpdateStatus(campaign.id, stage.key as Campaign["status"])}
+                            activeOpacity={0.7}
+                        >
+                            <View style={styles.timelineIconContainer}>
+                                <Icon
+                                    name={stage.icon}
+                                    size={18}
+                                    color={isActive ? COLORS.forestGreen : isPast ? COLORS.forestGreen : COLORS.darkGray}
+                                />
+                                {index < stages.length - 1.5 && (
+                                    <View
+                                        style={[
+                                            styles.timelineConnector,
+                                            { backgroundColor: isPast ? COLORS.forestGreen : COLORS.softBrown },
+                                        ]}
+                                    />
+                                )}
+                            </View>
+                            <Text
+                                style={[
+                                    styles.timelineLabel,
+                                    { color: isActive ? COLORS.forestGreen : isPast ? COLORS.forestGreen : COLORS.darkGray },
+                                ]}
+                            >
+                                {stage.label}
+                            </Text>
+                        </TouchableOpacity>
+                    );
+                })}
+            </View>
+        );
+    };
 
-            // Actualizar el estado del brote a "planned"
-            const outbreakRef = doc(db, "outbreaks", outbreakId as string);
-            await updateDoc(outbreakRef, { status: "planned" });
-
-            console.log("Campaña creada y estado del brote actualizado.");
-            showAlert("Éxito", "Campaña creada correctamente.", () => {
-                router.back();
-            });
-        } catch (error: any) {
-            console.error("Error al crear campaña o actualizar brote:", error.message);
-            showAlert("Error", "No se pudo crear la campaña.", () => {});
-        }
+    const renderCampaign = ({ item }: { item: Campaign }) => {
+        const farmName = farms[item.farmId] || "Finca desconocida";
+        const outbreakName = outbreaks[item.outbreakId] || "Brote desconocido";
+        return (
+            <View style={styles.campaignItem}>
+                <View style={styles.campaignContent}>
+                    <View style={styles.campaignHeader}>
+                        <Icon name="hospital" size={24} color={COLORS.forestGreen} style={styles.icon} />
+                        <Text style={styles.campaignTitle}>{item.vaccineType}</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                        <Icon name="paw" size={16} color={COLORS.darkGray} style={styles.detailIcon} />
+                        <Text style={styles.campaignDetail}>Animales: {item.targetAnimals}</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                        <Icon name="calendar" size={16} color={COLORS.darkGray} style={styles.detailIcon} />
+                        <Text style={styles.campaignDetail}>Inicio: {item.startDate}</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                        <Icon name="barn" size={16} color={COLORS.darkGray} style={styles.detailIcon} />
+                        <Text style={styles.campaignDetail}>Finca: {farmName}</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                        <Icon name="alert-circle-outline" size={16} color={COLORS.darkGray} style={styles.detailIcon} />
+                        <Text style={styles.campaignDetail}>
+                            Brote: {Array.isArray(outbreakName) ? outbreakName.join(', ') : outbreakName.split(/\s+/).join(', ')}
+                        </Text>
+                    </View>
+                    {renderTimeline(item)}
+                </View>
+            </View>
+        );
     };
 
     return (
@@ -97,60 +218,24 @@ export default function CampaignForm() {
                     onPress={() => router.back()}
                     activeOpacity={0.7}
                 >
-                    <Icon name="arrow-left" size={24} color={COLORS.forestGreen} />
+                    <Icon name="arrow-left" size={24} color={COLORS.white} />
                 </TouchableOpacity>
-                <Text style={styles.title}>Campaña</Text>
+                <Text style={styles.title}>Campañas</Text>
             </View>
-            <View style={styles.form}>
-                <View style={styles.inputContainer}>
-                    <View style={styles.inputHeader}>
-                        <Icon name="syringe" size={20} color={COLORS.forestGreen} style={styles.inputIcon} />
-                        <Text style={styles.label}>Tipo de Vacuna</Text>
-                    </View>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Ej. Fiebre aftosa"
-                        placeholderTextColor={COLORS.softBrown}
-                        value={vaccineType}
-                        onChangeText={setVaccineType}
-                    />
+            {campaigns.length === 0 ? (
+                <View style={styles.emptyContainer}>
+                    <Icon name="syringe" size={48} color={COLORS.softBrown} />
+                    <Text style={styles.emptyText}>No hay campañas registradas</Text>
                 </View>
-                <View style={styles.inputContainer}>
-                    <View style={styles.inputHeader}>
-                        <Icon name="paw" size={20} color={COLORS.forestGreen} style={styles.inputIcon} />
-                        <Text style={styles.label}>Número de Animales</Text>
-                    </View>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Ej. 50"
-                        placeholderTextColor={COLORS.softBrown}
-                        value={targetAnimals}
-                        onChangeText={setTargetAnimals}
-                        keyboardType="numeric"
-                    />
-                </View>
-                <View style={styles.inputContainer}>
-                    <View style={styles.inputHeader}>
-                        <Icon name="calendar" size={20} color={COLORS.forestGreen} style={styles.inputIcon} />
-                        <Text style={styles.label}>Fecha de Inicio (AAAA-MM-DD)</Text>
-                    </View>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Ej. 2025-05-15"
-                        placeholderTextColor={COLORS.softBrown}
-                        value={startDate}
-                        onChangeText={setStartDate}
-                    />
-                </View>
-                <TouchableOpacity
-                    style={styles.submitButton}
-                    onPress={handleSubmitCampaign}
-                    activeOpacity={0.7}
-                >
-                    <Icon name="check-circle-outline" size={20} color={COLORS.white} style={styles.buttonIcon} />
-                    <Text style={styles.buttonText}>Crear Campaña</Text>
-                </TouchableOpacity>
-            </View>
+            ) : (
+                <FlatList
+                    data={campaigns}
+                    renderItem={renderCampaign}
+                    keyExtractor={(item) => item.id}
+                    contentContainerStyle={styles.listContainer}
+                    showsVerticalScrollIndicator={false}
+                />
+            )}
         </View>
     );
 }
@@ -168,79 +253,107 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         marginBottom: 24,
         position: "relative",
+        backgroundColor: COLORS.forestGreen,
+        paddingHorizontal: 15,
+        paddingVertical: 15,
+        borderRadius: 8,
     },
     backButton: {
         position: "absolute",
         left: 0,
         padding: 8,
+        marginLeft: 10
     },
     title: {
         fontSize: 26,
         fontWeight: "700",
-        color: COLORS.forestGreen,
+        color: COLORS.white,
         letterSpacing: 0.5,
     },
-    form: {
+    campaignItem: {
         backgroundColor: COLORS.white,
         padding: 16,
         borderRadius: 12,
+        marginBottom: 12,
         shadowColor: COLORS.darkGray,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 3,
-    },
-    inputContainer: {
-        marginBottom: 16,
-    },
-    inputHeader: {
-        flexDirection: "row",
-        alignItems: "center",
-        marginBottom: 6,
-    },
-    inputIcon: {
-        marginRight: 8,
-    },
-    label: {
-        fontSize: 14,
-        fontWeight: "500",
-        color: COLORS.darkGray,
-    },
-    input: {
-        backgroundColor: COLORS.white,
-        borderColor: COLORS.darkGray,
         borderWidth: 1,
-        borderRadius: 12,
-        padding: 12,
-        fontSize: 14,
-        color: COLORS.darkGray,
-        shadowColor: COLORS.darkGray,
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        elevation: 2,
+        borderColor: COLORS.forestGreen,
     },
-    submitButton: {
+    campaignContent: {
+        marginBottom: 8,
+    },
+    campaignHeader: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: COLORS.forestGreen,
-        paddingVertical: 12,
-        paddingHorizontal: 20,
-        borderRadius: 12,
-        shadowColor: COLORS.darkGray,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
+        marginBottom: 8,
     },
-    buttonIcon: {
+    icon: {
         marginRight: 8,
     },
-    buttonText: {
-        color: COLORS.white,
+    campaignTitle: {
         fontSize: 16,
+        fontWeight: "600",
+        color: COLORS.forestGreen,
+    },
+    detailRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginBottom: 4,
+    },
+    detailIcon: {
+        marginRight: 8,
+    },
+    campaignDetail: {
+        fontSize: 14,
+        color: COLORS.darkGray,
         fontWeight: "500",
+    },
+    timelineContainer: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        marginTop: 12,
+        paddingVertical: 8,
+        paddingLeft: 20, // Shift timeline right
+    },
+    timelineStage: {
+        alignItems: "center",
         flex: 1,
+    },
+    timelineIconContainer: {
+        position: "relative",
+        alignItems: "center",
+    },
+    timelineConnector: {
+        position: "absolute",
+        top: 9,
+        right: -70, // Adjusted to match wider spacing
+        width: 70, // Increased to move stages right
+        height: 2,
+        backgroundColor: COLORS.softBrown,
+    },
+    timelineLabel: {
+        fontSize: 11,
+        fontWeight: "500",
+        marginTop: 4,
         textAlign: "center",
+    },
+    emptyContainer: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    emptyText: {
+        fontSize: 16,
+        color: COLORS.softBrown,
+        textAlign: "center",
+        marginTop: 12,
+        fontWeight: "500",
+    },
+    listContainer: {
+        paddingBottom: 20,
     },
 });
