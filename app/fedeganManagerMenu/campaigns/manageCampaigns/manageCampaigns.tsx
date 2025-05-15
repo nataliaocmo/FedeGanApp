@@ -85,7 +85,7 @@ export default function ManageCampaigns() {
         const unsubscribeFarms = onSnapshot(qFarms, (snapshot) => {
             const farmsData = snapshot.docs.reduce((acc, doc) => {
                 const data = doc.data() as Farm;
-                return { ...acc, [doc.id]: { name: data.name || "Finca desconocida", region: data.region || "Sin región" } };
+                return { ...acc, [doc.id]: { name: data.name || "Finca desconocida", region: data.region || "Colombia" } };
             }, {} as { [key: string]: { name: string; region: string } });
             console.log("Fincas cargadas:", farmsData);
             setFarms(farmsData);
@@ -119,7 +119,7 @@ export default function ManageCampaigns() {
         campaigns.forEach((campaign) => {
             const farm = farms[campaign.farmId];
             if (farm) {
-                const region = farm.region || "Sin región";
+                const region = farm.region || "Colombia";
                 if (!stats[region]) {
                     stats[region] = { totalVaccinated: 0, averageProgress: 0, campaignCount: 0 };
                 }
@@ -139,11 +139,19 @@ export default function ManageCampaigns() {
         setRegionStats(stats);
     }, [campaigns, farms]);
 
+    const handleCampaignPress = (campaignId: string) => {
+        router.push(`/fedeganManagerMenu/campaigns/manageCampaigns/detailCampaign?campaignId=${campaignId}`);
+    };
+
     const renderCampaign = ({ item }: { item: Campaign }) => {
-        const farm = farms[item.farmId] || { name: "Finca desconocida", region: "Sin región" };
+        const farm = farms[item.farmId] || { name: "Finca desconocida", region: "Colombia" };
         const outbreakName = outbreaks[item.outbreakId] || "Brote desconocido";
         return (
-            <View style={styles.campaignItem}>
+            <TouchableOpacity
+                style={styles.campaignItem}
+                onPress={() => handleCampaignPress(item.id)}
+                activeOpacity={0.7}
+            >
                 <View style={styles.campaignContent}>
                     <View style={styles.campaignHeader}>
                         <Icon name="hospital" size={24} color={COLORS.forestGreen} style={styles.icon} />
@@ -153,26 +161,18 @@ export default function ManageCampaigns() {
                         <Icon name="barn" size={16} color={COLORS.darkGray} style={styles.detailIcon} />
                         <Text style={styles.campaignDetail}>Finca: {farm.name}</Text>
                     </View>
-                    <View style={styles.detailRow}>
-                        <Icon name="map-marker" size={16} color={COLORS.darkGray} style={styles.detailIcon} />
-                        <Text style={styles.campaignDetail}>Región: {farm.region}</Text>
-                    </View>
+                    
                     <View style={styles.detailRow}>
                         <Icon name="alert-circle-outline" size={16} color={COLORS.darkGray} style={styles.detailIcon} />
                         <Text style={styles.campaignDetail}>
                             Brote: {Array.isArray(outbreakName) ? outbreakName.join(", ") : outbreakName}
                         </Text>
                     </View>
+                    
+                    
                     <View style={styles.detailRow}>
-                        <Icon name="paw" size={16} color={COLORS.darkGray} style={styles.detailIcon} />
-                        <Text style={styles.campaignDetail}>Animales objetivo: {item.targetAnimals}</Text>
-                    </View>
-                    <View style={styles.detailRow}>
-                        <Icon name="syringe" size={16} color={COLORS.darkGray} style={styles.detailIcon} />
-                        <Text style={styles.campaignDetail}>
-                            Animales vacunados: {item.vaccinatedAnimals || 0} (
-                            {item.progress ? item.progress.toFixed(1) : 0}%)
-                        </Text>
+                        <Icon name="calendar" size={16} color={COLORS.darkGray} style={styles.detailIcon} />
+                        <Text style={styles.campaignDetail}>Inicio: {item.startDate}</Text>
                     </View>
                     <View style={styles.detailRow}>
                         <Icon name="check-circle-outline" size={16} color={COLORS.darkGray} style={styles.detailIcon} />
@@ -181,7 +181,7 @@ export default function ManageCampaigns() {
                         </Text>
                     </View>
                 </View>
-            </View>
+            </TouchableOpacity>
         );
     };
 
@@ -189,10 +189,19 @@ export default function ManageCampaigns() {
         return Object.entries(regionStats).map(([region, stats]) => (
             <View key={region} style={styles.regionStatsItem}>
                 <Text style={styles.regionStatsTitle}>{region}</Text>
-                <Text style={styles.regionStatsText}>Campañas: {stats.campaignCount}</Text>
-                <Text style={styles.regionStatsText}>Animales vacunados: {stats.totalVaccinated}</Text>
                 <Text style={styles.regionStatsText}>
-                    Progreso promedio: {stats.averageProgress.toFixed(1)}%
+                    <Text style={{ fontWeight: 'bold' }}>Campañas: </Text>
+                    {stats.campaignCount}
+                </Text>
+
+                <Text style={styles.regionStatsText}>
+                    <Text style={{ fontWeight: 'bold' }}>Animales vacunados: </Text>
+                    {stats.totalVaccinated}
+                </Text>
+
+                <Text style={styles.regionStatsText}>
+                    <Text style={{ fontWeight: 'bold' }}>Progreso: </Text>
+                    {stats.averageProgress.toFixed(1)}%
                 </Text>
             </View>
         ));
@@ -211,7 +220,7 @@ export default function ManageCampaigns() {
                 <Text style={styles.title}>Gestión de Campañas</Text>
             </View>
             <View style={styles.statsContainer}>
-                <Text style={styles.statsTitle}>Estadísticas por Región</Text>
+                <Text style={styles.statsTitle}>Estadísticas</Text>
                 {Object.keys(regionStats).length === 0 ? (
                     <Text style={styles.emptyStatsText}>No hay datos disponibles</Text>
                 ) : (
@@ -285,15 +294,16 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
     regionStatsItem: {
-        marginBottom: 12,
-        padding: 8,
+        marginBottom: 2,
+        padding: 16,
         backgroundColor: COLORS.cream,
         borderRadius: 8,
     },
     regionStatsTitle: {
-        fontSize: 16,
+        fontSize: 18,
         fontWeight: "600",
         color: COLORS.darkGray,
+        paddingBottom: 5
     },
     regionStatsText: {
         fontSize: 14,

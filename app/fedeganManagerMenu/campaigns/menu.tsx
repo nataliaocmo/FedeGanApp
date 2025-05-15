@@ -25,7 +25,7 @@ export default function CampaignsMenu() {
             </View>
             <TouchableOpacity
                 style={styles.button}
-                onPress={() => router.push("/fedeganManagerMenu/campaigns/manageCampaigns")}
+                onPress={() => router.push("/fedeganManagerMenu/campaigns/manageCampaigns/manageCampaigns")}
                 activeOpacity={0.7}
             >
                 <Icon name="calendar-check" size={24} color={COLORS.white} style={styles.icon} />
