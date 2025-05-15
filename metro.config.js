@@ -6,7 +6,14 @@ module.exports = (async () => {
         ...config,
         resolver: {
         ...config.resolver,
-        assetExts: [...config.resolver.assetExts, 'html'],
+        assetExts: [...config.resolver.assetExts, 'png'],
+        sourceExts: [...config.resolver.sourceExts, 'jsx', 'tsx', 'ts', 'js'],
+        // Evitar módulos nativos en la web
+        unstable_condition: {
+            web: {
+            blockList: [/react-native-maps/],
+            },
+        },
         },
     };
 })();
