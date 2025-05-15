@@ -1,6 +1,7 @@
-// app/auth/Register.tsx
 import { useAuth } from "@/context/authContext/AuthContext";
+import { db } from "@/utils/FirebaseConfig";
 import { useRouter } from "expo-router";
+import { collection, onSnapshot, query } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
     Alert,
@@ -35,6 +36,12 @@ const DISPLAY_ROLE_MAP: { [key: string]: string } = {
     farmManager: "Trabajador",
 };
 
+// Interfaz para finca
+interface Farm {
+    id: string;
+    name: string;
+}
+
 export default function Register() {
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
@@ -42,96 +49,95 @@ export default function Register() {
     const [phone, setPhone] = useState("");
     const [birthdate, setBirthdate] = useState("");
     const [birthdateError, setBirthdateError] = useState("");
-    const [role, setRole] = useState("farmManager"); // Valor interno por defecto
-    const [roleOptions, setRoleOptions] = useState<string[]>(["En espera..."]); // Opciones para la UI
+    const [role, setRole] = useState("farmManager");
+    const [roleOptions, setRoleOptions] = useState<string[]>(["En espera..."]);
+    const [farms, setFarms] = useState<Farm[]>([]);
+    const [selectedFarmId, setSelectedFarmId] = useState<string | null>(null);
 
     const router = useRouter();
     const { register } = useAuth();
 
-    // Función para validar el formato de la fecha (YYYY-MM-DD)
-    const validateDateFormat = (input: string): boolean => {
-        // Expresión regular para YYYY-MM-DD
-        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-        if (!dateRegex.test(input)) {
-            return false;
-        }
+    // Cargar fincas
+    useEffect(() => {
+        const qFarms = query(collection(db, "farms"));
+        const unsubscribeFarms = onSnapshot(qFarms, (snapshot) => {
+            const farmsData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                name: doc.data().name || "Finca desconocida",
+            }));
+            setFarms(farmsData);
+        }, (error) => {
+            console.error("Error al cargar fincas:", error.message);
+            Alert.alert("Error", "No se pudieron cargar las fincas.");
+        });
 
-        // Validar que sea una fecha válida
+        return () => unsubscribeFarms();
+    }, []);
+
+    // Validar formato de fecha
+    const validateDateFormat = (input: string): boolean => {
+        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+        if (!dateRegex.test(input)) return false;
         const [year, month, day] = input.split("-").map(Number);
         const date = new Date(year, month - 1, day);
         return (
             date.getFullYear() === year &&
             date.getMonth() === month - 1 &&
             date.getDate() === day &&
-            year >= 1900 && // Límite inferior razonable
-            year <= new Date().getFullYear() // No fechas futuras
+            year >= 1900 &&
+            year <= new Date().getFullYear()
         );
     };
 
-    // Función para manejar cambios en el campo de fecha
+    // Manejar cambios en fecha
     const handleBirthdateChange = (text: string) => {
-        // Permitir solo números y guiones en posiciones válidas
-        const cleanedText = text.replace(/[^0-9-]/g, ""); // Solo números y guiones
+        const cleanedText = text.replace(/[^0-9-]/g, "");
         let formattedText = cleanedText;
-
-        // Aplicar formato automático
         if (cleanedText.length > 4 && cleanedText[4] !== "-") {
             formattedText = `${cleanedText.slice(0, 4)}-${cleanedText.slice(4)}`;
         }
         if (cleanedText.length > 7 && cleanedText[7] !== "-") {
             formattedText = `${formattedText.slice(0, 7)}-${formattedText.slice(7)}`;
         }
-
-        // Limitar longitud a 10 caracteres (YYYY-MM-DD)
-        if (formattedText.length > 10) {
-            formattedText = formattedText.slice(0, 10);
-        }
-
+        if (formattedText.length > 10) formattedText = formattedText.slice(0, 10);
         setBirthdate(formattedText);
-
-        // Validar el formato
         if (formattedText.length === 10) {
-            if (validateDateFormat(formattedText)) {
-                setBirthdateError("");
-            } else {
-                setBirthdateError("Formato inválido. Usa YYYY-MM-DD (ej. 2025-05-14)");
-            }
+            setBirthdateError(validateDateFormat(formattedText) ? "" : "Formato inválido. Usa YYYY-MM-DD (ej. 2025-05-14)");
         } else {
             setBirthdateError("");
         }
     };
 
-    // Función que devuelve los roles disponibles según el correo
+    // Obtener opciones de rol según correo
     const getRoleOptions = (email: string): string[] => {
         if (!email) return ["En espera..."];
         const emailLower = email.toLowerCase();
-
         if (emailLower.endsWith("@fedegan.gob.co")) {
-            return ["Vacunador", "Administrador"]; // Nombres legibles para la UI
+            return ["Vacunador", "Administrador"];
         }
-
         return ["Trabajador"];
     };
 
-    // Actualiza las opciones de rol cada vez que cambia el correo
+    // Actualizar opciones de rol
     useEffect(() => {
         const options = getRoleOptions(email);
         setRoleOptions(options);
         if (!options.includes(DISPLAY_ROLE_MAP[role] || "")) {
-            // Selecciona el valor interno correspondiente a la primera opción
             setRole(ROLE_MAP[options[0]] || "farmManager");
         }
-    }, [email]);
+    }, [email, role]);
 
     const handleRegister = async () => {
         if (!name || !email || !password || !phone || !birthdate || !role) {
             Alert.alert("Error", "Por favor completa todos los campos.");
             return;
         }
-
-        // Validar que la fecha sea correcta antes de registrar
         if (birthdate.length !== 10 || !validateDateFormat(birthdate)) {
             Alert.alert("Error", "La fecha de nacimiento debe tener el formato YYYY-MM-DD y ser válida.");
+            return;
+        }
+        if (role === "farmManager" && !selectedFarmId) {
+            Alert.alert("Error", "Por favor selecciona una finca.");
             return;
         }
 
@@ -141,7 +147,8 @@ export default function Register() {
             password,
             phone,
             birthdate,
-            role, // Aquí se envía el valor interno (fedeganManager, vaccinationAgent, farmManager)
+            role,
+            ...(role === "farmManager" && { farmId: selectedFarmId }),
         };
 
         const success = await register(userData);
@@ -220,13 +227,12 @@ export default function Register() {
                     value={birthdate}
                     onChangeText={handleBirthdateChange}
                     placeholderTextColor="#aaa"
-                    keyboardType="numeric" // Solo números para facilitar la entrada
-                    maxLength={10} // Limitar a 10 caracteres (YYYY-MM-DD)
+                    keyboardType="numeric"
+                    maxLength={10}
                 />
                 {birthdateError ? <Text style={styles.errorText}>{birthdateError}</Text> : null}
             </View>
 
-            {/* Botones dinámicos para seleccionar el rol */}
             <View style={styles.inputContainer}>
                 <Text style={styles.label}>Rol</Text>
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 10 }}>
@@ -235,7 +241,10 @@ export default function Register() {
                             key={index}
                             onPress={() => {
                                 if (option !== "En espera...") {
-                                    setRole(ROLE_MAP[option]); // Guarda el valor interno
+                                    setRole(ROLE_MAP[option]);
+                                    if (ROLE_MAP[option] !== "farmManager") {
+                                        setSelectedFarmId(null);
+                                    }
                                 }
                             }}
                             disabled={option === "En espera..."}
@@ -258,6 +267,37 @@ export default function Register() {
                     ))}
                 </View>
             </View>
+
+            {role === "farmManager" && (
+                <View style={styles.inputContainer}>
+                    <Text style={styles.label}>Finca</Text>
+                    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 10 }}>
+                        {farms.length > 0 ? (
+                            farms.map((farm) => (
+                                <TouchableOpacity
+                                    key={farm.id}
+                                    onPress={() => setSelectedFarmId(farm.id)}
+                                    style={[
+                                        styles.roleButton,
+                                        selectedFarmId === farm.id && styles.roleButtonSelected,
+                                    ]}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.roleButtonText,
+                                            selectedFarmId === farm.id && styles.roleButtonTextSelected,
+                                        ]}
+                                    >
+                                        {farm.name}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))
+                        ) : (
+                            <Text style={styles.errorText}>No hay fincas disponibles</Text>
+                        )}
+                    </View>
+                </View>
+            )}
 
             <TouchableOpacity style={styles.button} onPress={handleRegister}>
                 <Text style={styles.buttonText}>Registrarse</Text>
@@ -306,7 +346,7 @@ const styles = StyleSheet.create({
         color: COLORS.darkGray,
     },
     inputError: {
-        borderColor: "red", // Resaltar el campo si hay error
+        borderColor: "red",
     },
     errorText: {
         color: "red",
