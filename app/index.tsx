@@ -1,11 +1,12 @@
-// App.tsx
-import React from 'react';
-import { Text, View } from 'react-native';
+import { Redirect } from "expo-router";
+import React from "react";
+import { Platform } from "react-native";
 
-export default function index() {
-  return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text>HOLA</Text>
-    </View>
-  );
+export default function Index() {
+  // For web, ensure Redirect only runs in the browser
+  if (Platform.OS === "web" && typeof window === "undefined") {
+    return null; // Prevent rendering during SSR
+  }
+
+  return <Redirect href="/auth/Login" />;
 }
