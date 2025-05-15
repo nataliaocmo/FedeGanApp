@@ -33,7 +33,7 @@ export default function CampaignsMenu() {
             </TouchableOpacity>
             <TouchableOpacity
                 style={styles.button}
-                onPress={() => router.push("/fedeganManagerMenu/campaigns/manageVaccinationAgents")}
+                onPress={() => router.push("/fedeganManagerMenu/campaigns/manageVaccinationAgents/manageVaccinationAgents")}
                 activeOpacity={0.7}
             >
                 <Icon name="account-group" size={24} color={COLORS.white} style={styles.icon} />
