@@ -1,7 +1,7 @@
 import { useAuth } from "@/context/authContext/AuthContext";
 import { db } from "@/utils/FirebaseConfig";
 import { useRouter } from "expo-router";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { collection, onSnapshot, query } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import { Alert, FlatList, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
@@ -63,11 +63,8 @@ export default function CampaignMenu() {
             return;
         }
 
-        // Cargar brotes creados por el usuario
-        const qOutbreaks = query(
-            collection(db, "outbreaks"),
-            where("createdBy", "==", user.uid)
-        );
+        // Cargar todos los brotes
+        const qOutbreaks = query(collection(db, "outbreaks"));
         const unsubscribeOutbreaks = onSnapshot(qOutbreaks, (snapshot) => {
             const outbreaksData = snapshot.docs.map((doc) => ({
                 id: doc.id,

@@ -1,9 +1,11 @@
 import { useAuth } from "@/context/authContext/AuthContext";
 import { db } from "@/utils/FirebaseConfig";
+import { useRouter } from "expo-router";
 import { addDoc, collection, doc, getDoc, onSnapshot, query } from "firebase/firestore";
 import 'leaflet/dist/leaflet.css'; // Agregar estilos de Leaflet para la web
 import React, { Suspense, useEffect, useRef, useState } from "react";
 import { Alert, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import Icon from "react-native-vector-icons/MaterialCommunityIcons"; // Ensure this is installed
 import { WebView } from 'react-native-webview';
 
 // Importaciones dinámicas para React-Leaflet
@@ -79,6 +81,7 @@ export default function InteractiveMap() {
     const [validatedOutbreaks, setValidatedOutbreaks] = useState<string[]>([]);
     const [icons, setIcons] = useState<{ redPinIcon: any; greenPinIcon: any } | null>(null);
     const mapRef = useRef<any>(null); // Referencia para el mapa
+    const router = useRouter();
 
     // Cargar íconos dinámicamente
     useEffect(() => {
@@ -269,20 +272,42 @@ export default function InteractiveMap() {
 
     // Esperar a que los íconos estén listos
     if (Platform.OS === "web" && !icons) {
-        return <View style={styles.container}><Text>Cargando mapa...</Text></View>;
+        return (
+            <View style={styles.container}>
+                <View style={styles.header}>
+                    <TouchableOpacity
+                        style={styles.backButton}
+                        onPress={() => router.back()}
+                        activeOpacity={0.7}
+                    >
+                        <Icon name="arrow-left" size={24} color={COLORS.forestGreen} />
+                    </TouchableOpacity>
+                    <Text style={styles.title}>Cargando mapa...</Text>
+                </View>
+            </View>
+        );
     }
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Mapa de Brotes</Text>
-            {Platform.OS === "web" ? (
-                <Suspense fallback={<View style={styles.container}><Text>Cargando mapa...</Text></View>}>
-                    <View style={styles.mapContainer}>
+            <View style={styles.header}>
+                <TouchableOpacity
+                    style={styles.backButton}
+                    onPress={() => router.back()}
+                    activeOpacity={0.7}
+                >
+                    <Icon name="arrow-left" size={24} color={COLORS.forestGreen} />
+                </TouchableOpacity>
+                <Text style={styles.title}>Mapa de Brotes</Text>
+            </View>
+            <View style={styles.mapContainer}>
+                {Platform.OS === "web" ? (
+                    <Suspense fallback={<Text style={styles.loadingText}>Cargando mapa...</Text>}>
                         <MapContainer
                             center={[initialRegion.latitude, initialRegion.longitude]}
                             zoom={6}
                             style={{ height: '100%', width: '100%' }}
-                            
+                            ref={mapRef}
                         >
                             <TileLayer
                                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -304,32 +329,34 @@ export default function InteractiveMap() {
                                 </LeafletMarker>
                             ))}
                         </MapContainer>
-                    </View>
-                </Suspense>
-            ) : (
-                <WebView
-                    style={styles.map}
-                    originWhitelist={['*']}
-                    source={{ html: leafletHtml }}
-                    onMessage={(event) => {
-                        try {
-                            const data = JSON.parse(event.nativeEvent.data);
-                            const outbreak = outbreaks.find(o => o.id === data.id);
-                            if (outbreak) handleMarkerPress(outbreak);
-                        } catch (error) {
-                            console.error("Error parsing WebView message:", error);
-                        }
-                    }}
-                />
-            )}
-
+                    </Suspense>
+                ) : (
+                    <WebView
+                        style={styles.map}
+                        originWhitelist={['*']}
+                        source={{ html: leafletHtml }}
+                        onMessage={(event) => {
+                            try {
+                                const data = JSON.parse(event.nativeEvent.data);
+                                const outbreak = outbreaks.find(o => o.id === data.id);
+                                if (outbreak) handleMarkerPress(outbreak);
+                            } catch (error) {
+                                console.error("Error parsing WebView message:", error);
+                            }
+                        }}
+                    />
+                )}
+            </View>
             {selectedOutbreak && !validatedOutbreaks.includes(selectedOutbreak.id) && (
                 <View style={styles.validationForm}>
-                    <Text style={styles.formTitle}>
-                        Validar Brote: {selectedOutbreak.diseases.join(", ")}
-                    </Text>
+                    <View style={styles.formHeader}>
+                        <Icon name="alert-circle-outline" size={20} color={COLORS.forestGreen} style={styles.formIcon} />
+                        <Text style={styles.formTitle}>
+                            Brote: {selectedOutbreak.diseases.join(", ")}
+                        </Text>
+                    </View>
                     <Text style={styles.formSubtitle}>
-                        <Text style={{ fontWeight: 'bold' }}>Nombre: </Text>
+                        <Text style={{ fontWeight: 'bold' }}>Finca: </Text>
                         {farmName}
                     </Text>
                     <TextInput
@@ -339,6 +366,7 @@ export default function InteractiveMap() {
                         value={recommendations}
                         onChangeText={setRecommendations}
                         multiline
+                        numberOfLines={4}
                     />
                     <TouchableOpacity
                         style={styles.validateButton}
@@ -359,21 +387,35 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.cream,
         paddingHorizontal: 20,
         paddingTop: 40,
+        paddingBottom: 20,
+    },
+    header: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        marginBottom: 24,
+        position: "relative",
+    },
+    backButton: {
+        position: "absolute",
+        left: 0,
+        padding: 8,
     },
     title: {
-        fontSize: 28,
+        fontSize: 26,
         fontWeight: "700",
         color: COLORS.forestGreen,
-        marginBottom: 20,
-        textAlign: "center",
+        letterSpacing: 0.5,
     },
     mapContainer: {
         flex: 1,
         borderRadius: 12,
         overflow: "hidden",
-        height: '100%', // Asegurar altura explícita
-        width: '100%',
-        paddingBottom: 40
+        shadowColor: COLORS.darkGray,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
     },
     map: {
         flex: 1,
@@ -382,18 +424,25 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.white,
         padding: 16,
         borderRadius: 12,
-        marginTop: 20,
+        marginVertical: 20,
         shadowColor: COLORS.darkGray,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 3,
     },
+    formHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginBottom: 8,
+    },
+    formIcon: {
+        marginRight: 8,
+    },
     formTitle: {
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: "600",
         color: COLORS.forestGreen,
-        marginBottom: 8,
     },
     formSubtitle: {
         fontSize: 14,
@@ -404,7 +453,7 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.cream,
         borderColor: COLORS.darkGray,
         borderWidth: 1,
-        borderRadius: 8,
+        borderRadius: 12,
         padding: 12,
         fontSize: 14,
         color: COLORS.darkGray,
@@ -413,14 +462,32 @@ const styles = StyleSheet.create({
         textAlignVertical: "top",
     },
     validateButton: {
+        flexDirection: "row",
+        alignItems: "center",
         backgroundColor: COLORS.forestGreen,
         paddingVertical: 12,
+        paddingHorizontal: 20,
         borderRadius: 12,
-        alignItems: "center",
+        shadowColor: COLORS.darkGray,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    buttonIcon: {
+        marginRight: 8,
     },
     buttonText: {
         color: COLORS.white,
         fontSize: 16,
         fontWeight: "500",
+        flex: 1,
+        textAlign: "center",
+    },
+    loadingText: {
+        fontSize: 16,
+        color: COLORS.darkGray,
+        textAlign: "center",
+        marginTop: 20,
     },
 });
