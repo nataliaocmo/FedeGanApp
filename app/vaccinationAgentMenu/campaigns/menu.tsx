@@ -20,7 +20,7 @@ export default function CampaignsMenu() {
         <View style={styles.container}>
             <View style={styles.header}>
                 <Icon name="calendar-outline" size={40} color={COLORS.forestGreen} />
-                <Text style={styles.title}>Menú de Campañas</Text>
+                <Text style={styles.title}>Campañas</Text>
                 <Text style={styles.subtitle}>Elige una opción:</Text>
             </View>
             <TouchableOpacity

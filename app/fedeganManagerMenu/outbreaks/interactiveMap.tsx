@@ -296,7 +296,7 @@ export default function InteractiveMap() {
                     onPress={() => router.back()}
                     activeOpacity={0.7}
                 >
-                    <Icon name="arrow-left" size={24} color={COLORS.forestGreen} />
+                    <Icon name="arrow-left" size={24} color={COLORS.white} />
                 </TouchableOpacity>
                 <Text style={styles.title}>Mapa de Brotes</Text>
             </View>
@@ -395,16 +395,21 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         marginBottom: 24,
         position: "relative",
+        backgroundColor: COLORS.forestGreen,
+        paddingHorizontal: 15,
+        paddingVertical: 15,
+        borderRadius: 8,
     },
     backButton: {
         position: "absolute",
         left: 0,
         padding: 8,
+        marginLeft: 10
     },
     title: {
         fontSize: 26,
         fontWeight: "700",
-        color: COLORS.forestGreen,
+        color: COLORS.white,
         letterSpacing: 0.5,
     },
     mapContainer: {

@@ -25,6 +25,15 @@ interface Campaign {
     createdAt: any;
     createdBy: string;
     status: "planned" | "in_progress" | "completed";
+    vaccinatedAnimals?: number;
+    progress?: number;
+    vaccinationRecords?: {
+        vaccinatedAnimals: number;
+        vaccinationDate: any;
+        comments: string;
+        createdBy: string;
+        createdAt: any;
+    }[];
 }
 
 // Función para mostrar alertas
@@ -83,7 +92,7 @@ export default function CampaignsList() {
             showAlert("Error", "No se pudieron cargar las fincas.", () => {});
         });
 
-        // Cargar todos las brotes
+        // Cargar todos los brotes
         const qOutbreaks = query(collection(db, "outbreaks"));
         const unsubscribeOutbreaks = onSnapshot(qOutbreaks, (snapshot) => {
             const outbreaksData = snapshot.docs.reduce((acc, doc) => {
@@ -126,6 +135,10 @@ export default function CampaignsList() {
         );
     };
 
+    const handleCampaignPress = (campaignId: string) => {
+        router.push(`/vaccinationAgentMenu/campaigns/detailCampaigns?campaignId=${campaignId}`);
+    };
+
     const renderTimeline = (campaign: Campaign) => {
         const status = campaign.status || "planned";
         const stages = [
@@ -138,7 +151,7 @@ export default function CampaignsList() {
             <View style={styles.timelineContainer}>
                 {stages.map((stage, index) => {
                     const isActive = status === stage.key;
-                    const isPast = stages.findIndex(s => s.key === status) >= index;
+                    const isPast = stages.findIndex((s) => s.key === status) >= index;
                     return (
                         <TouchableOpacity
                             key={stage.key}
@@ -152,7 +165,7 @@ export default function CampaignsList() {
                                     size={18}
                                     color={isActive ? COLORS.forestGreen : isPast ? COLORS.forestGreen : COLORS.darkGray}
                                 />
-                                {index < stages.length - 1.5 && (
+                                {index < stages.length - 1 && (
                                     <View
                                         style={[
                                             styles.timelineConnector,
@@ -180,7 +193,11 @@ export default function CampaignsList() {
         const farmName = farms[item.farmId] || "Finca desconocida";
         const outbreakName = outbreaks[item.outbreakId] || "Brote desconocido";
         return (
-            <View style={styles.campaignItem}>
+            <TouchableOpacity
+                style={styles.campaignItem}
+                onPress={() => handleCampaignPress(item.id)}
+                activeOpacity={0.7}
+            >
                 <View style={styles.campaignContent}>
                     <View style={styles.campaignHeader}>
                         <Icon name="hospital" size={24} color={COLORS.forestGreen} style={styles.icon} />
@@ -188,7 +205,13 @@ export default function CampaignsList() {
                     </View>
                     <View style={styles.detailRow}>
                         <Icon name="paw" size={16} color={COLORS.darkGray} style={styles.detailIcon} />
-                        <Text style={styles.campaignDetail}>Animales: {item.targetAnimals}</Text>
+                        <Text style={styles.campaignDetail}>Animales objetivo: {item.targetAnimals}</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                        <Icon name="pill" size={16} color={COLORS.darkGray} style={styles.detailIcon} />
+                        <Text style={styles.campaignDetail}>
+                            Animales vacunados: {item.vaccinatedAnimals || 0} ({item.progress ? item.progress.toFixed(1) : 0}%)
+                        </Text>
                     </View>
                     <View style={styles.detailRow}>
                         <Icon name="calendar" size={16} color={COLORS.darkGray} style={styles.detailIcon} />
@@ -201,12 +224,12 @@ export default function CampaignsList() {
                     <View style={styles.detailRow}>
                         <Icon name="alert-circle-outline" size={16} color={COLORS.darkGray} style={styles.detailIcon} />
                         <Text style={styles.campaignDetail}>
-                            Brote: {Array.isArray(outbreakName) ? outbreakName.join(', ') : outbreakName.split(/\s+/).join(', ')}
+                            Brote: {Array.isArray(outbreakName) ? outbreakName.join(", ") : outbreakName.split(/\s+/).join(", ")}
                         </Text>
                     </View>
                     {renderTimeline(item)}
                 </View>
-            </View>
+            </TouchableOpacity>
         );
     };
 
@@ -262,7 +285,7 @@ const styles = StyleSheet.create({
         position: "absolute",
         left: 0,
         padding: 8,
-        marginLeft: 10
+        marginLeft: 10,
     },
     title: {
         fontSize: 26,
@@ -317,7 +340,7 @@ const styles = StyleSheet.create({
         justifyContent: "space-between",
         marginTop: 12,
         paddingVertical: 8,
-        paddingLeft: 20, // Shift timeline right
+        paddingLeft: 20,
     },
     timelineStage: {
         alignItems: "center",
@@ -330,8 +353,8 @@ const styles = StyleSheet.create({
     timelineConnector: {
         position: "absolute",
         top: 9,
-        right: -70, // Adjusted to match wider spacing
-        width: 70, // Increased to move stages right
+        right: -70,
+        width: 70,
         height: 2,
         backgroundColor: COLORS.softBrown,
     },

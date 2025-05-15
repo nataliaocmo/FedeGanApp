@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
+import CampaignsMenu from "./campaigns/menu";
 import BrotesMenu from "./outbreaks/menu";
 //import  from "./campaigns_Screen.tsx";
 //import  from "./settings_Screen.tsx";
@@ -18,12 +19,6 @@ const COLORS = {
 };
 
 const CommerceScreen = () => (
-    <View style={styles.screenContainer}>
-        <Text style={styles.screenText}>Campañas de vacunación</Text>
-    </View>
-);
-
-const CampaignsScreen = () => (
     <View style={styles.screenContainer}>
         <Text style={styles.screenText}>Campañas de vacunación</Text>
     </View>
@@ -80,7 +75,7 @@ export default function VaccinationAgentMenu() {
             })}
         >
             <Tab.Screen name="Brotes" component={BrotesMenu} />
-            <Tab.Screen name="Campañas" component={CampaignsScreen} />
+            <Tab.Screen name="Campañas" component={CampaignsMenu} />
             <Tab.Screen name="Comercio" component={CommerceScreen} />
             <Tab.Screen name="Ajustes" component={SettingsScreen} />
         </Tab.Navigator>

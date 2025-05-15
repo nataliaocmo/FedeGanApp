@@ -13,31 +13,31 @@ const COLORS = {
     darkGray: "#424242",
 };
 
-export default function FarmsAndAnimalsMenu() {
+export default function CampaignsMenu() {
     const router = useRouter();
 
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <Icon name="barn" size={40} color={COLORS.forestGreen} />
-                <Text style={styles.title}>Fincas y animales</Text>
+                <Icon name="bullhorn" size={40} color={COLORS.forestGreen} />
+                <Text style={styles.title}>Campañas</Text>
                 <Text style={styles.subtitle}>Elige una opción:</Text>
             </View>
             <TouchableOpacity
                 style={styles.button}
-                onPress={() => router.push("/vaccinationAgentMenu/farmsAndAnimals/farmsRegister")}
+                onPress={() => router.push("/fedeganManagerMenu/campaigns/manageCampaigns")}
                 activeOpacity={0.7}
             >
-                <Icon name="plus-circle-outline" size={24} color={COLORS.white} style={styles.icon} />
-                <Text style={styles.buttonText}>Registrar finca</Text>
+                <Icon name="calendar-check" size={24} color={COLORS.white} style={styles.icon} />
+                <Text style={styles.buttonText}>Monitorear campañas</Text>
             </TouchableOpacity>
             <TouchableOpacity
                 style={styles.button}
-                onPress={() => router.push("/vaccinationAgentMenu/farmsAndAnimals/farmsView")}
+                onPress={() => router.push("/fedeganManagerMenu/campaigns/manageVaccinationAgents")}
                 activeOpacity={0.7}
             >
-                <Icon name="view-list-outline" size={24} color={COLORS.white} style={styles.icon} />
-                <Text style={styles.buttonText}>Fincas y animales</Text>
+                <Icon name="account-group" size={24} color={COLORS.white} style={styles.icon} />
+                <Text style={styles.buttonText}>Monitorear vacunadores</Text>
             </TouchableOpacity>
         </View>
     );
