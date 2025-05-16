@@ -18,7 +18,7 @@ interface Animal {
     id: string;
     species: string;
     farmId: string;
-    isImported: boolean;
+    isImported?: boolean; // Cambiado a opcional para reflejar datos reales
     quantity?: number;
 }
 
@@ -110,6 +110,9 @@ export default function ExportForm() {
                 if (animal.quantity === undefined || animal.quantity === null) {
                     console.warn(`Cantidad faltante para animal ID: ${animal.id}, especie: ${animal.species}`);
                 }
+                if (animal.isImported === undefined) {
+                    console.warn(`isImported faltante para animal ID: ${animal.id}, especie: ${animal.species}`);
+                }
             });
             setAnimals(animalsData);
             setLoading(false);
@@ -174,7 +177,7 @@ export default function ExportForm() {
                     species: animal.species,
                     farmId: animal.farmId,
                     quantity: animal.quantity ?? 0,
-                    isImported: animal.isImported,
+                    isImported: animal.isImported ?? false, // Valor por defecto false si undefined
                     exportedAt: new Date().toISOString(),
                 });
 
@@ -217,10 +220,16 @@ export default function ExportForm() {
                         {item.species}
                     </Text>
                     <View style={styles.quantityRow}>
-                    <Text style={styles.quantityText}>
-                        <Text style={{ fontWeight: 'bold' }}>Cantidad: </Text>
-                        {item.quantity !== undefined && item.quantity !== null ? item.quantity : "Desconocida"}
-                    </Text>
+                        <Text style={styles.quantityText}>
+                            <Text style={{ fontWeight: 'bold' }}>Cantidad: </Text>
+                            {item.quantity !== undefined && item.quantity !== null ? item.quantity : "Desconocida"}
+                        </Text>
+                    </View>
+                    <View style={styles.quantityRow}>
+                        <Text style={styles.quantityText}>
+                            <Text style={{ fontWeight: 'bold' }}>Importado: </Text>
+                            {item.isImported !== undefined ? (item.isImported ? "Sí" : "No") : "No"}
+                        </Text>
                     </View>
                 </View>
             </View>
