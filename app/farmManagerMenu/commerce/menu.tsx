@@ -25,7 +25,7 @@ export default function CommerceMenu() {
             </View>
             <TouchableOpacity
                 style={styles.button}
-                onPress={() => router.push("/farmManagerMenu/commerce/import/import")}
+                onPress={() => router.push("/farmManagerMenu/commerce/import/importForm")}
                 activeOpacity={0.7}
             >
                 <Icon name="import" size={24} color={COLORS.white} style={styles.icon} />
@@ -33,7 +33,7 @@ export default function CommerceMenu() {
             </TouchableOpacity>
             <TouchableOpacity
                 style={styles.button}
-                onPress={() => router.push("/fedeganManagerMenu/campaigns/manageVaccinationAgents/manageVaccinationAgents")}
+                onPress={() => router.push("/farmManagerMenu/commerce/export/exportForm")}
                 activeOpacity={0.7}
             >
                 <Icon name="export" size={24} color={COLORS.white} style={styles.icon} />
