@@ -33,7 +33,7 @@ export default function CommerceMenu() {
             </TouchableOpacity>
             <TouchableOpacity
                 style={styles.button}
-                onPress={() => router.push("/fedeganManagerMenu/commerce/especificCommerce")}
+                onPress={() => router.push("/fedeganManagerMenu/commerce/specificCommerce")}
                 activeOpacity={0.7}
             >
                 <Icon name="handshake" size={24} color={COLORS.white} style={styles.icon} />
