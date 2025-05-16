@@ -19,7 +19,7 @@ interface Animal {
     species: string;
     farmId: string;
     isImported: boolean;
-    quantity?: number; // Optional to handle missing quantity
+    quantity?: number;
 }
 
 export default function ExportForm() {
@@ -31,7 +31,6 @@ export default function ExportForm() {
     const [debugInfo, setDebugInfo] = useState<string>("");
     const router = useRouter();
 
-    // Map species to icons
     const getSpeciesIcon = (species: string): string => {
         switch (species.toLowerCase()) {
             case "vaca":
@@ -72,7 +71,6 @@ export default function ExportForm() {
             return;
         }
 
-        // Fetch farm name
         const fetchFarmName = async (farmId: string) => {
             try {
                 const farmDocRef = doc(db, "farms", farmId);
@@ -86,12 +84,10 @@ export default function ExportForm() {
                 } else {
                     console.error("Finca no encontrada para farmId:", farmId);
                     setFarmName("Finca no encontrada");
-                    setDebugInfo(`Finca no encontrada para ID: ${farmId}`);
                 }
             } catch (error: any) {
                 console.error("Error al cargar nombre de la finca:", error.message, { code: error.code });
                 setFarmName("Error al cargar");
-                setDebugInfo(`Error al cargar nombre de la finca: ${error.message}`);
             }
         };
 
@@ -99,7 +95,6 @@ export default function ExportForm() {
 
         console.log("Consultando animales para farmId:", user.farmId);
 
-        // Consulta principal: todos los animales para farmId
         const qAnimals = query(
             collection(db, "animals"),
             where("farmId", "==", user.farmId)
@@ -111,7 +106,6 @@ export default function ExportForm() {
                 ...doc.data(),
             })) as Animal[];
             console.log("Animales obtenidos:", animalsData);
-            // Log animals with missing quantity
             animalsData.forEach(animal => {
                 if (animal.quantity === undefined || animal.quantity === null) {
                     console.warn(`Cantidad faltante para animal ID: ${animal.id}, especie: ${animal.species}`);
@@ -122,11 +116,9 @@ export default function ExportForm() {
         }, (error) => {
             console.error("Error al cargar animales:", error.message, { code: error.code });
             Alert.alert("Error", `No se pudieron cargar los animales: ${error.message}`);
-            setDebugInfo(prev => `${prev}\nError: ${error.message}`);
             setLoading(false);
         });
 
-        // Consulta de depuración: todos los animales en la colección
         const qAllAnimals = query(collection(db, "animals"));
         const unsubscribeAllAnimals = onSnapshot(qAllAnimals, (snapshot) => {
             const allAnimalsData = snapshot.docs.map(doc => ({
@@ -144,7 +136,6 @@ export default function ExportForm() {
         };
     }, [user, router]);
 
-    // Example: Using farmName in logic outside fetchFarmName
     useEffect(() => {
         if (farmName !== "Cargando...") {
             console.log(`Procesando datos para la finca: ${farmName}`);
@@ -164,7 +155,7 @@ export default function ExportForm() {
 
     const handleSubmit = async () => {
         if (selectedAnimalIds.length === 0) {
-            Alert.alert("Advertencia", "Por favor, selecciona al menos un animal para importar.");
+            Alert.alert("Advertencia", "Por favor, selecciona al menos un animal para exportar.");
             return;
         }
 
@@ -175,18 +166,29 @@ export default function ExportForm() {
 
         try {
             const batch = writeBatch(db);
-            selectedAnimalIds.forEach(animalId => {
-                const animalRef = doc(db, "animals", animalId);
-                batch.update(animalRef, { isImported: true });
+            const selectedAnimals = animals.filter(animal => selectedAnimalIds.includes(animal.id));
+
+            selectedAnimals.forEach(animal => {
+                const exportedAnimalRef = doc(db, "exportedAnimals", animal.id);
+                batch.set(exportedAnimalRef, {
+                    species: animal.species,
+                    farmId: animal.farmId,
+                    quantity: animal.quantity ?? 0,
+                    isImported: animal.isImported,
+                    exportedAt: new Date().toISOString(),
+                });
+
+                const animalRef = doc(db, "animals", animal.id);
+                batch.delete(animalRef);
             });
 
             await batch.commit();
-            console.log(`Animales importados para ${farmName}:`, selectedAnimalIds);
-            Alert.alert("Éxito", "Los animales seleccionados han sido marcados como importados.");
+            console.log(`Animales exportados para ${farmName}:`, selectedAnimalIds);
+            Alert.alert("Éxito", "Los animales seleccionados han sido exportados.");
             router.push("/farmManagerMenu/commerce/export/export");
         } catch (error: any) {
-            console.error("Error al importar animales:", error.message, { code: error.code });
-            Alert.alert("Error", `No se pudieron importar los animales: ${error.message}`);
+            console.error("Error al exportar animales:", error.message, { code: error.code });
+            Alert.alert("Error", `No se pudieron exportar los animales: ${error.message}`);
         }
     };
 
@@ -210,12 +212,16 @@ export default function ExportForm() {
                     style={styles.detailIcon}
                 />
                 <View>
-                <Text style={styles.animalText}>Especie: {item.species}</Text>
-                <View style={styles.quantityRow}>
-                    <Text style={styles.quantityText}>
-                        Cantidad: {item.quantity !== undefined && item.quantity !== null ? item.quantity : "Desconocida"}
+                    <Text style={styles.animalText}>
+                        <Text style={{ fontWeight: 'bold' }}>Especie: </Text>
+                        {item.species}
                     </Text>
-                </View>
+                    <View style={styles.quantityRow}>
+                    <Text style={styles.quantityText}>
+                        <Text style={{ fontWeight: 'bold' }}>Cantidad: </Text>
+                        {item.quantity !== undefined && item.quantity !== null ? item.quantity : "Desconocida"}
+                    </Text>
+                    </View>
                 </View>
             </View>
         </TouchableOpacity>
@@ -371,7 +377,7 @@ const styles = StyleSheet.create({
         marginRight: 8,
     },
     animalText: {
-        fontSize: 14,
+        fontSize: 12,
         color: COLORS.darkGray,
         marginLeft: 8,
     },

@@ -14,20 +14,38 @@ const COLORS = {
     darkGray: "#424242",
 };
 
-interface Animal {
+interface ExportedAnimal {
     id: string;
     species: string;
     farmId: string;
     isImported: boolean;
+    quantity: number;
+    exportedAt: string;
 }
 
-export default function Export() {
+export default function ExportList() {
     const { user } = useAuth();
-    const [animals, setAnimals] = useState<Animal[]>([]);
+    const [exportedAnimals, setExportedAnimals] = useState<ExportedAnimal[]>([]);
     const [farmName, setFarmName] = useState<string>("Cargando...");
     const [loading, setLoading] = useState(true);
     const [debugInfo, setDebugInfo] = useState<string>("");
     const router = useRouter();
+
+    const getSpeciesIcon = (species: string): string => {
+        switch (species.toLowerCase()) {
+            case "vaca":
+            case "bovino":
+                return "cow";
+            case "caballo":
+                return "horse";
+            case "oveja":
+                return "sheep";
+            case "cerdo":
+                return "pig";
+            default:
+                return "paw";
+        }
+    };
 
     useEffect(() => {
         if (!user) {
@@ -53,7 +71,6 @@ export default function Export() {
             return;
         }
 
-        // Fetch farm name
         const fetchFarmName = async (farmId: string) => {
             try {
                 const farmDocRef = doc(db, "farms", farmId);
@@ -63,7 +80,7 @@ export default function Export() {
                     const name = farmData.name || "Finca sin nombre";
                     setFarmName(name);
                     console.log("Nombre de la finca:", name);
-                    setDebugInfo(`Finca: ${name}\n`);
+                    
                 } else {
                     console.error("Finca no encontrada para farmId:", farmId);
                     setFarmName("Finca no encontrada");
@@ -76,67 +93,71 @@ export default function Export() {
             }
         };
 
-        // Call fetchFarmName with guaranteed farmId
         fetchFarmName(user.farmId);
 
-        console.log("Consultando animales para farmId:", user.farmId);
+        console.log("Consultando animales exportados para farmId:", user.farmId);
 
-        // Consulta principal: animales no importados para farmId
-        const qAnimals = query(
-            collection(db, "animals"),
-            where("farmId", "==", user.farmId),
-            where("isImported", "==", false)
+        const qExportedAnimals = query(
+            collection(db, "exportedAnimals"),
+            where("farmId", "==", user.farmId)
         );
 
-        const unsubscribeAnimals = onSnapshot(qAnimals, (snapshot) => {
-            const animalsData = snapshot.docs.map(doc => ({
+        const unsubscribeExportedAnimals = onSnapshot(qExportedAnimals, (snapshot) => {
+            const exportedAnimalsData = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data(),
-            })) as Animal[];
-            console.log("Animales no importados obtenidos:", animalsData);
-            setAnimals(animalsData);
-            setDebugInfo(prev => `${prev}Animales encontrados: ${animalsData.length}`);
+            })) as ExportedAnimal[];
+            console.log("Animales exportados obtenidos:", exportedAnimalsData);
+            setExportedAnimals(exportedAnimalsData);
+            
             setLoading(false);
         }, (error) => {
-            console.error("Error al cargar animales:", error.message, { code: error.code });
-            Alert.alert("Error", `No se pudieron cargar los animales: ${error.message}`);
-            setDebugInfo(prev => `${prev}\nError: ${error.message}`);
+            console.error("Error al cargar animales exportados:", error.message, { code: error.code });
+            Alert.alert("Error", `No se pudieron cargar los animales exportados: ${error.message}`);
+            
             setLoading(false);
         });
 
-        // Consulta de depuración: todos los animales
-        const qAllAnimals = query(collection(db, "animals"));
-        const unsubscribeAllAnimals = onSnapshot(qAllAnimals, (snapshot) => {
-            const allAnimalsData = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
-            })) as Animal[];
-            console.log("Todos los animales en la colección:", allAnimalsData);
-            const matchingAnimals = allAnimalsData.filter(animal => animal.farmId === user.farmId);
-            console.log("Animales que coinciden con farmId:", matchingAnimals);
-            setDebugInfo(prev => `${prev}\nTotal animales en colección: ${allAnimalsData.length}\nCoincidencias con farmId: ${matchingAnimals.length}`);
-        }, (error) => {
-            console.error("Error al cargar todos los animales:", error.message, { code: error.code });
-        });
-
-        return () => {
-            unsubscribeAnimals();
-            unsubscribeAllAnimals();
-        };
+        return () => unsubscribeExportedAnimals();
     }, [user, router]);
 
-    const renderAnimal = ({ item }: { item: Animal }) => (
+    const renderExportedAnimal = ({ item }: { item: ExportedAnimal }) => (
         <View style={styles.animalItem}>
             <View style={styles.detailRow}>
-                <Icon name="paw" size={16} color={COLORS.darkGray} style={styles.detailIcon} />
-                <Text style={styles.animalText}>Especie: {item.species}</Text>
+                <Icon
+                    name={getSpeciesIcon(item.species)}
+                    size={16}
+                    color={COLORS.darkGray}
+                    style={styles.detailIcon}
+                />
+                <View>
+                <Text style={styles.animalText}>
+                    <Text style={{ fontWeight: 'bold' }}>Especie: </Text>
+                    {item.species}
+                    </Text>
+
+                    <View style={styles.quantityRow}>
+                    <Text style={styles.quantityText}>
+                        <Text style={{ fontWeight: 'bold' }}>Cantidad: </Text>
+                        {item.quantity}
+                    </Text>
+                    </View>
+
+                    <View style={styles.quantityRow}>
+                    <Text style={styles.quantityText}>
+                        <Text style={{ fontWeight: 'bold' }}>Exportado: </Text>
+                        {new Date(item.exportedAt).toLocaleDateString("es-ES")}
+                    </Text>
+                    </View>
+                </View>
             </View>
         </View>
     );
 
     if (loading) {
         return (
-            <View style={styles.container}>
+            <View style={styles.loadingContainer}>
+                <Icon name="loading" size={40} color={COLORS.forestGreen} style={styles.loadingIcon} />
                 <Text style={styles.loadingText}>Cargando...</Text>
             </View>
         );
@@ -147,33 +168,33 @@ export default function Export() {
             <View style={styles.header}>
                 <TouchableOpacity
                     style={styles.backButton}
-                    onPress={() => router.back()}
+                    onPress={() => router.replace("/farmManagerMenu")}
                     activeOpacity={0.7}
                 >
                     <Icon name="arrow-left" size={24} color={COLORS.white} />
                 </TouchableOpacity>
-                <Icon name="truck-fast" size={24} color={COLORS.white} />
-                <Text style={styles.title}>  Exportado</Text>
+                <Icon name="export" size={24} color={COLORS.white} />
+                <Text style={styles.title}> Exportados</Text>
             </View>
-            <View style={styles.animalsContainer}>
-                <Text style={styles.animalsTitle}>Lista de Animales</Text>
-                <Text style={styles.debugText}>{debugInfo}</Text>
+            <View style={styles.formContainer}>
+                <Text style={styles.formTitle}>{farmName !== "Cargando..." ? farmName : ""}</Text>
+                <View style={styles.debugRow}>
+                    <Text style={[styles.debugText]}>Has exportado estos animales de tu finca:</Text>
+                </View>
                 <FlatList
-                    data={animals}
-                    renderItem={renderAnimal}
+                    data={exportedAnimals}
+                    renderItem={renderExportedAnimal}
                     keyExtractor={item => item.id}
                     showsVerticalScrollIndicator={false}
-                    ListEmptyComponent={<Text style={styles.emptyAnimalsText}>No hay animales disponibles para esta finca</Text>}
+                    ListEmptyComponent={
+                        <View style={styles.emptyContainer}>
+                            <Icon name="cow-off" size={40} color={COLORS.softBrown} style={styles.emptyIcon} />
+                            <Text style={styles.emptyAnimalsText}>
+                                No hay animales exportados para {farmName !== "Cargando..." ? farmName : "esta finca"}
+                            </Text>
+                        </View>
+                    }
                 />
-                {animals.length > 0 && (
-                    <TouchableOpacity
-                        style={styles.importButton}
-                        onPress={() => router.push("/farmManagerMenu/commerce/import/importForm")}
-                        activeOpacity={0.7}
-                    >
-                        <Text style={styles.importButtonText}>Importar Animales</Text>
-                    </TouchableOpacity>
-                )}
             </View>
         </View>
     );
@@ -185,6 +206,12 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.cream,
         paddingHorizontal: 20,
         paddingTop: 40,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: COLORS.cream,
     },
     header: {
         flexDirection: "row",
@@ -208,8 +235,9 @@ const styles = StyleSheet.create({
         fontWeight: "700",
         color: COLORS.white,
         letterSpacing: 0.5,
+        textAlign: "center",
     },
-    animalsContainer: {
+    formContainer: {
         backgroundColor: COLORS.white,
         padding: 16,
         borderRadius: 12,
@@ -221,11 +249,24 @@ const styles = StyleSheet.create({
         elevation: 3,
         flex: 1,
     },
-    animalsTitle: {
+    formTitle: {
         fontSize: 18,
         fontWeight: "600",
         color: COLORS.forestGreen,
-        marginBottom: 12,
+        marginBottom: 5,
+    },
+    debugRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginBottom: 8,
+    },
+    debugIcon: {
+        marginRight: 8,
+    },
+    debugText: {
+        fontSize: 12,
+        color: COLORS.darkGray,
+        textAlign: "center",
     },
     animalItem: {
         padding: 8,
@@ -238,42 +279,45 @@ const styles = StyleSheet.create({
         alignItems: "center",
         marginBottom: 8,
     },
+    quantityRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginTop: 4,
+    },
     detailIcon: {
         marginRight: 8,
     },
+    quantityIcon: {
+        marginRight: 8,
+    },
     animalText: {
-        fontSize: 14,
+        fontSize: 12,
         color: COLORS.darkGray,
         marginLeft: 8,
+    },
+    quantityText: {
+        fontSize: 12,
+        color: COLORS.darkGray,
+        marginLeft: 8,
+    },
+    emptyContainer: {
+        alignItems: "center",
+        marginTop: 16,
+    },
+    emptyIcon: {
+        marginBottom: 8,
     },
     emptyAnimalsText: {
         fontSize: 14,
         color: COLORS.softBrown,
         textAlign: "center",
-        marginTop: 16,
     },
-    importButton: {
-        backgroundColor: COLORS.forestGreen,
-        padding: 12,
-        borderRadius: 8,
-        alignItems: "center",
-        marginTop: 16,
-    },
-    importButtonText: {
-        fontSize: 16,
-        fontWeight: "600",
-        color: COLORS.white,
+    loadingIcon: {
+        marginBottom: 8,
     },
     loadingText: {
         fontSize: 18,
         color: COLORS.darkGray,
-        textAlign: "center",
-        marginTop: 20,
-    },
-    debugText: {
-        fontSize: 12,
-        color: COLORS.darkGray,
-        marginBottom: 8,
         textAlign: "center",
     },
 });
