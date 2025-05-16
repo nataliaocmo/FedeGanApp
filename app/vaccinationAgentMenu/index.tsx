@@ -33,7 +33,7 @@ export default function VaccinationAgentMenu() {
                     const icons: Record<string, string> = {
                         "Fincas y animales": "leaf-outline",
                         Campañas: "calendar-outline",
-                        Ajustes: "settings-outline",
+                        Ajustes: "log-out-outline",
                     };
 
                     return <Icon name={icons[route.name]} size={size} color={color} />;

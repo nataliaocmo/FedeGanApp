@@ -1,11 +1,11 @@
 // App.tsx
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
 import CampaignsMenu from "./campaigns/menu";
 import CommerceMenu from "./commerce/menu";
 import BrotesMenu from "./outbreaks/menu";
+import Menu from "./settings/menu";
 //import  from "./campaigns_Screen.tsx";
 //import  from "./settings_Screen.tsx";
 
@@ -18,12 +18,6 @@ const COLORS = {
     white: "#FFFFFF",
     darkGray: "#424242",
 };
-
-const SettingsScreen = () => (
-    <View style={styles.screenContainer}>
-        <Text style={styles.screenText}>Ajustes</Text>
-    </View>
-);
 
 const Tab = createBottomTabNavigator();
 
@@ -72,21 +66,7 @@ export default function VaccinationAgentMenu() {
             <Tab.Screen name="Brotes" component={BrotesMenu} />
             <Tab.Screen name="Campañas" component={CampaignsMenu} />
             <Tab.Screen name="Comercio" component={CommerceMenu} />
-            <Tab.Screen name="Ajustes" component={SettingsScreen} />
+            <Tab.Screen name="Ajustes" component={Menu} />
         </Tab.Navigator>
     );
 }
-
-const styles = StyleSheet.create({
-    screenContainer: {
-        flex: 1,
-        backgroundColor: COLORS.cream,
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    screenText: {
-        fontSize: 24,
-        color: COLORS.forestGreen,
-        fontWeight: "600",
-    },
-});
