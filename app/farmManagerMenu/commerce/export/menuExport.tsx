@@ -19,25 +19,25 @@ export default function CommerceMenu() {
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <Icon name="shopping" size={40} color={COLORS.forestGreen} />
-                <Text style={styles.title}>Comercio</Text>
+                <Icon name="import" size={40} color={COLORS.forestGreen} />
+                <Text style={styles.title}>Importación</Text>
                 <Text style={styles.subtitle}>Elige una opción:</Text>
             </View>
             <TouchableOpacity
                 style={styles.button}
-                onPress={() => router.push("/farmManagerMenu/commerce/import/menuImport")}
+                onPress={() => router.push("/farmManagerMenu/commerce/import/importForm")}
                 activeOpacity={0.7}
             >
                 <Icon name="import" size={24} color={COLORS.white} style={styles.icon} />
-                <Text style={styles.buttonText}>Importación</Text>
+                <Text style={styles.buttonText}>Hacer importación</Text>
             </TouchableOpacity>
             <TouchableOpacity
                 style={styles.button}
-                onPress={() => router.push("/farmManagerMenu/commerce/export/menuExport")}
+                onPress={() => router.push("/farmManagerMenu/commerce/import/import")}
                 activeOpacity={0.7}
             >
                 <Icon name="export" size={24} color={COLORS.white} style={styles.icon} />
-                <Text style={styles.buttonText}>Exportación</Text>
+                <Text style={styles.buttonText}>Ver importaciones</Text>
             </TouchableOpacity>
         </View>
     );
