@@ -112,9 +112,7 @@ export default function SpecificCommerce() {
                         </View>
                     }
                 />
-                <TouchableOpacity onPress={() => router.back()}>
-                    <Text style={styles.backText}>Volver</Text>
-                </TouchableOpacity>
+                
             </View>
         </View>
     );

@@ -46,12 +46,16 @@ interface Movement {
 export default function DetailsFarm() {
     const { user } = useAuth();
     const router = useRouter();
-    const { "item.id": fincaId } = useLocalSearchParams();
+    const params = useLocalSearchParams();
+    const fincaId = params.fincaId;
     const [farmName, setFarmName] = useState<string>("Cargando...");
     const [movements, setMovements] = useState<Movement[]>([]);
     const [loading, setLoading] = useState(true);
     const importedMovementsRef = useRef<Movement[]>([]);
     const exportedMovementsRef = useRef<Movement[]>([]);
+
+    console.log("Parámetros recibidos:", params);
+    console.log("fincaId:", fincaId);
 
     const formatDate = (input: any): { formatted: string; timestamp: number } => {
         let date: Date;
@@ -98,7 +102,7 @@ export default function DetailsFarm() {
             return;
         }
 
-        if (typeof fincaId !== "string") {
+        if (!fincaId || typeof fincaId !== "string") {
             console.error("fincaId inválido:", fincaId);
             Alert.alert("Error", "ID de finca inválido.", [
                 { text: "OK", onPress: () => router.back() },
@@ -248,7 +252,7 @@ export default function DetailsFarm() {
             <View style={styles.formContainer}>
                 <Text style={styles.formTitle}>Movimientos de Animales</Text>
                 <Text style={styles.summaryText}>
-                    Total Importaciones: {totalImports} | Total Exportaciones: {totalExports}
+                    Importaciones: {totalImports}      ||      Exportaciones: {totalExports}
                 </Text>
                 <FlatList
                     data={movements}
@@ -262,9 +266,7 @@ export default function DetailsFarm() {
                         </View>
                     }
                 />
-                <TouchableOpacity onPress={() => router.back()}>
-                    <Text style={styles.backText}>Volver</Text>
-                </TouchableOpacity>
+                
             </View>
         </View>
     );
@@ -322,7 +324,7 @@ const styles = StyleSheet.create({
         textAlign: "center",
     },
     summaryText: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: "500",
         color: COLORS.darkGray,
         marginBottom: 12,
