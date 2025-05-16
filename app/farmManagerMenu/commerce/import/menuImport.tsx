@@ -19,25 +19,28 @@ export default function CommerceMenu() {
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <Icon name="shopping" size={40} color={COLORS.forestGreen} />
-                <Text style={styles.title}>Comercio</Text>
+                <Icon name="import" size={40} color={COLORS.forestGreen} />
+                <Text style={styles.title}>Importación</Text>
                 <Text style={styles.subtitle}>Elige una opción:</Text>
             </View>
             <TouchableOpacity
                 style={styles.button}
-                onPress={() => router.push("/farmManagerMenu/commerce/import/menuImport")}
+                onPress={() => router.push("/farmManagerMenu/commerce/import/importForm")}
                 activeOpacity={0.7}
             >
-                <Icon name="import" size={24} color={COLORS.white} style={styles.icon} />
-                <Text style={styles.buttonText}>Importación</Text>
+                <Icon name="tray-arrow-down" size={24} color={COLORS.white} style={styles.icon} />
+                <Text style={styles.buttonText}>Hacer importación</Text>
             </TouchableOpacity>
             <TouchableOpacity
                 style={styles.button}
-                onPress={() => router.push("/farmManagerMenu/commerce/export/menuExport")}
+                onPress={() => router.push("/farmManagerMenu/commerce/import/import")}
                 activeOpacity={0.7}
             >
-                <Icon name="export" size={24} color={COLORS.white} style={styles.icon} />
-                <Text style={styles.buttonText}>Exportación</Text>
+                <Icon name="download-box" size={24} color={COLORS.white} style={styles.icon} />
+                <Text style={styles.buttonText}>Ver importaciones</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.back()}>
+                <Text style={styles.backText}>Volver</Text>
             </TouchableOpacity>
         </View>
     );
@@ -92,5 +95,11 @@ const styles = StyleSheet.create({
     },
     icon: {
         marginRight: 12,
+    },
+    backText: {
+        marginTop: 15,
+        color: COLORS.softBrown,
+        fontSize: 14,
+        textDecorationLine: "underline",
     },
 });

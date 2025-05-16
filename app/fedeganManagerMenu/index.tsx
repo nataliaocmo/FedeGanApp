@@ -1,11 +1,11 @@
 // App.tsx
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { router } from "expo-router";
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { default as Icon, default as Ionicons } from "react-native-vector-icons/Ionicons";
+import Icon from "react-native-vector-icons/Ionicons";
 import CampaignsMenu from "./campaigns/menu";
+import CommerceMenu from "./commerce/menu";
 import BrotesMenu from "./outbreaks/menu";
+import Menu from "./settings/menu";
 //import  from "./campaigns_Screen.tsx";
 //import  from "./settings_Screen.tsx";
 
@@ -19,22 +19,6 @@ const COLORS = {
     darkGray: "#424242",
 };
 
-const CommerceScreen = () => (
-    <View style={styles.screenContainer}>
-        <Text style={styles.screenText}>Campañas de vacunación</Text>
-    </View>
-);
-
-const LogoutScreen = () => (
-    <View style={styles.screenContainer}>
-        <TouchableOpacity style={styles.importButton} onPress={() => router.replace("/auth/Login")}>
-        <Ionicons name="log-out-outline" size={24} color="#fff" />
-        <Text style={styles.importButtonText}>Cerrar sesión</Text>
-      </TouchableOpacity>
-        
-    </View>
-);
-
 const Tab = createBottomTabNavigator();
 
 export default function VaccinationAgentMenu() {
@@ -47,7 +31,7 @@ export default function VaccinationAgentMenu() {
                         Brotes: "alert-circle-outline",
                         Campañas: "calendar-outline",
                         Comercio: "cart-outline",
-                        Salir: "log-out-outline",
+                        Ajustes: "settings-outline",
                     };
 
                     return <Icon name={icons[route.name]} size={size} color={color} />;
@@ -81,34 +65,8 @@ export default function VaccinationAgentMenu() {
         >
             <Tab.Screen name="Brotes" component={BrotesMenu} />
             <Tab.Screen name="Campañas" component={CampaignsMenu} />
-            <Tab.Screen name="Comercio" component={CommerceScreen} />
-            <Tab.Screen name="Salir" component={LogoutScreen} />
+            <Tab.Screen name="Comercio" component={CommerceMenu} />
+            <Tab.Screen name="Ajustes" component={Menu} />
         </Tab.Navigator>
     );
 }
-
-const styles = StyleSheet.create({
-    screenContainer: {
-        flex: 1,
-        backgroundColor: COLORS.cream,
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    screenText: {
-        fontSize: 24,
-        color: COLORS.forestGreen,
-        fontWeight: "600",
-    },
-    importButton: {
-        backgroundColor: COLORS.forestGreen,
-        padding: 12,
-        borderRadius: 8,
-        alignItems: "center",
-        marginTop: 16,
-    },
-    importButtonText: {
-        fontSize: 16,
-        fontWeight: "600",
-        color: COLORS.white,
-    }
-});

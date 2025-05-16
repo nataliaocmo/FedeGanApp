@@ -19,25 +19,25 @@ export default function CommerceMenu() {
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <Icon name="shopping" size={40} color={COLORS.forestGreen} />
+                <Icon name="cart" size={40} color={COLORS.forestGreen} />
                 <Text style={styles.title}>Comercio</Text>
                 <Text style={styles.subtitle}>Elige una opción:</Text>
             </View>
             <TouchableOpacity
                 style={styles.button}
-                onPress={() => router.push("/farmManagerMenu/commerce/import/menuImport")}
+                onPress={() => router.push("/fedeganManagerMenu/commerce/generalCommerce")}
                 activeOpacity={0.7}
             >
-                <Icon name="import" size={24} color={COLORS.white} style={styles.icon} />
-                <Text style={styles.buttonText}>Importación</Text>
+                <Icon name="store" size={24} color={COLORS.white} style={styles.icon} />
+                <Text style={styles.buttonText}>Trazabilidad general</Text>
             </TouchableOpacity>
             <TouchableOpacity
                 style={styles.button}
-                onPress={() => router.push("/farmManagerMenu/commerce/export/menuExport")}
+                onPress={() => router.push("/fedeganManagerMenu/commerce/specificCommerce")}
                 activeOpacity={0.7}
             >
-                <Icon name="export" size={24} color={COLORS.white} style={styles.icon} />
-                <Text style={styles.buttonText}>Exportación</Text>
+                <Icon name="handshake" size={24} color={COLORS.white} style={styles.icon} />
+                <Text style={styles.buttonText}>Trazabilidad específica </Text>
             </TouchableOpacity>
         </View>
     );

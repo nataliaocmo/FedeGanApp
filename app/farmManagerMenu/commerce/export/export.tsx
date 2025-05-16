@@ -14,27 +14,39 @@ const COLORS = {
     darkGray: "#424242",
 };
 
-interface ImportedAnimal {
+interface ExportedAnimal {
     id: string;
     species: string;
-    breed: string;
-    age: number;
-    medicalHistory: string;
-    status: "Sano" | "Enfermo";
-    disease: string | null;
-    quantity: number;
     farmId: string;
-    importedAt: string;
-    origin: string;
+    isImported: boolean;
+    quantity: number;
+    exportedAt: string;
+    destination: string;
 }
 
-export default function ImportList() {
+export default function ExportList() {
     const { user } = useAuth();
-    const [importedAnimals, setImportedAnimals] = useState<ImportedAnimal[]>([]);
+    const [exportedAnimals, setExportedAnimals] = useState<ExportedAnimal[]>([]);
     const [farmName, setFarmName] = useState<string>("Cargando...");
     const [loading, setLoading] = useState(true);
     const [debugInfo, setDebugInfo] = useState<string>("");
     const router = useRouter();
+
+    const getSpeciesIcon = (species: string): string => {
+        switch (species.toLowerCase()) {
+            case "vaca":
+            case "bovino":
+                return "cow";
+            case "caballo":
+                return "horse";
+            case "oveja":
+                return "sheep";
+            case "cerdo":
+                return "pig";
+            default:
+                return "paw";
+        }
+    };
 
     useEffect(() => {
         if (!user) {
@@ -54,7 +66,7 @@ export default function ImportList() {
         if (!user.farmId) {
             console.error("Usuario sin finca asignada", { userId: user.uid, email: user.email });
             Alert.alert("Error", "No tienes una finca asignada. Contacta al administrador.");
-    
+            setDebugInfo("Usuario sin finca asignada.");
             setFarmName("Sin finca");
             setLoading(false);
             return;
@@ -69,88 +81,80 @@ export default function ImportList() {
                     const name = farmData.name || "Finca sin nombre";
                     setFarmName(name);
                     console.log("Nombre de la finca:", name);
-                    setDebugInfo(`Has importado los siguientes animales:`);
+                    
                 } else {
                     console.error("Finca no encontrada para farmId:", farmId);
                     setFarmName("Finca no encontrada");
-                    
+                    setDebugInfo(`Finca no encontrada para ID: ${farmId}`);
                 }
             } catch (error: any) {
                 console.error("Error al cargar nombre de la finca:", error.message, { code: error.code });
                 setFarmName("Error al cargar");
-               
+                setDebugInfo(`Error al cargar nombre de la finca: ${error.message}`);
             }
         };
 
         fetchFarmName(user.farmId);
 
-        console.log("Consultando animales importados para farmId:", user.farmId);
+        console.log("Consultando animales exportados para farmId:", user.farmId);
 
-        const qImportedAnimals = query(
-            collection(db, "importedAnimals"),
+        const qExportedAnimals = query(
+            collection(db, "exportedAnimals"),
             where("farmId", "==", user.farmId)
         );
 
-        const unsubscribeImportedAnimals = onSnapshot(qImportedAnimals, (snapshot) => {
-            const importedAnimalsData = snapshot.docs.map(doc => ({
+        const unsubscribeExportedAnimals = onSnapshot(qExportedAnimals, (snapshot) => {
+            const exportedAnimalsData = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data(),
-            })) as ImportedAnimal[];
-            console.log("Animales importados obtenidos:", importedAnimalsData);
-            setImportedAnimals(importedAnimalsData);
+            })) as ExportedAnimal[];
+            console.log("Animales exportados obtenidos:", exportedAnimalsData);
+            setExportedAnimals(exportedAnimalsData);
             
             setLoading(false);
         }, (error) => {
-            console.error("Error al cargar animales importados:", error.message, { code: error.code });
-            Alert.alert("Error", `No se pudieron cargar los animales importados: ${error.message}`);
+            console.error("Error al cargar animales exportados:", error.message, { code: error.code });
+            Alert.alert("Error", `No se pudieron cargar los animales exportados: ${error.message}`);
             
             setLoading(false);
         });
 
-        return () => unsubscribeImportedAnimals();
+        return () => unsubscribeExportedAnimals();
     }, [user, router]);
 
-    const renderImportedAnimal = ({ item }: { item: ImportedAnimal }) => (
+    const renderExportedAnimal = ({ item }: { item: ExportedAnimal }) => (
         <View style={styles.animalItem}>
             <View style={styles.detailRow}>
-                <Icon name="cow" size={16} color={COLORS.darkGray} style={styles.detailIcon} />
-                <View>  
-                <View style={styles.quantityRow}>
+                <Icon
+                    name={getSpeciesIcon(item.species)}
+                    size={16}
+                    color={COLORS.darkGray}
+                    style={styles.detailIcon}
+                />
+                <View>
                 <Text style={styles.animalText}>
-                    <Text style={{ fontWeight: 'bold' }}>Especie: </Text>{item.species}
+                    <Text style={{ fontWeight: 'bold' }}>Especie: </Text>
+                    {item.species}
                     </Text>
-                    </View>
-                    <View style={styles.quantityRow}>
-                        <Text style={styles.animalText}>
-                        <Text style={{ fontWeight: 'bold' }}>Raza: </Text>{item.breed}
-                        </Text>
-                    </View>
-                    <View style={styles.quantityRow}>
-                    <Text style={styles.quantityText}>
-                        <Text style={{ fontWeight: 'bold' }}>Edad: </Text>{item.age} años
-                    </Text>
-                    </View>
-                    <View style={styles.quantityRow}>
-                    <Text style={styles.quantityText}>
-                        <Text style={{ fontWeight: 'bold' }}>Cantidad: </Text>{item.quantity}
-                    </Text>
-                    </View>
-                    <View style={styles.quantityRow}>
-                    <Text style={styles.quantityText}>
-                        <Text style={{ fontWeight: 'bold' }}>Estado: </Text>{item.status}
-                    </Text>
-                    </View>
-                    {item.disease && (
-                    <View style={styles.quantityRow}>
-                        <Text style={styles.quantityText}>
-                        <Text style={{ fontWeight: 'bold' }}>Enfermedad: </Text>{item.disease}
-                        </Text>
-                    </View>
-                    )}
 
                     <View style={styles.quantityRow}>
                     <Text style={styles.quantityText}>
-                        <Text style={{ fontWeight: 'bold' }}>Origen: </Text>{item.origin}
+                        <Text style={{ fontWeight: 'bold' }}>Cantidad: </Text>
+                        {item.quantity}
+                    </Text>
+                    </View>
+
+                    <View style={styles.quantityRow}>
+                    <Text style={styles.quantityText}>
+                        <Text style={{ fontWeight: 'bold' }}>Exportado: </Text>
+                        {new Date(item.exportedAt).toLocaleDateString("es-ES")}
+                    </Text>
+                    </View>
+
+                    <View style={styles.quantityRow}>
+                    <Text style={styles.quantityText}>
+                        <Text style={{ fontWeight: 'bold' }}>Destino: </Text>
+                        {item.destination}
                     </Text>
                     </View>
                 </View>
@@ -177,24 +181,24 @@ export default function ImportList() {
                 >
                     <Icon name="arrow-left" size={24} color={COLORS.white} />
                 </TouchableOpacity>
-                <Icon name="import" size={24} color={COLORS.white} />
-                <Text style={styles.title}> Importados</Text>
+                <Icon name="export" size={24} color={COLORS.white} />
+                <Text style={styles.title}> Exportados</Text>
             </View>
             <View style={styles.formContainer}>
                 <Text style={styles.formTitle}>{farmName !== "Cargando..." ? farmName : ""}</Text>
                 <View style={styles.debugRow}>
-                    <Text style={styles.debugText}>{debugInfo}</Text>
+                    <Text style={[styles.debugText]}>Has exportado estos animales de tu finca:</Text>
                 </View>
                 <FlatList
-                    data={importedAnimals}
-                    renderItem={renderImportedAnimal}
+                    data={exportedAnimals}
+                    renderItem={renderExportedAnimal}
                     keyExtractor={item => item.id}
                     showsVerticalScrollIndicator={false}
                     ListEmptyComponent={
                         <View style={styles.emptyContainer}>
                             <Icon name="cow-off" size={40} color={COLORS.softBrown} style={styles.emptyIcon} />
                             <Text style={styles.emptyAnimalsText}>
-                                No hay animales importados para {farmName !== "Cargando..." ? farmName : "esta finca"}
+                                No hay animales exportados para {farmName !== "Cargando..." ? farmName : "esta finca"}
                             </Text>
                         </View>
                     }
@@ -257,7 +261,7 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: "600",
         color: COLORS.forestGreen,
-        marginBottom: 12,
+        marginBottom: 5,
     },
     debugRow: {
         flexDirection: "row",
