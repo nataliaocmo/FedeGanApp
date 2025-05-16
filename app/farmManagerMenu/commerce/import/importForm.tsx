@@ -33,12 +33,13 @@ export default function ImportForm() {
     const [quantity, setQuantity] = useState(1);
     const [status, setStatus] = useState<"Sano" | "Enfermo" | "">("");
     const [disease, setDisease] = useState("");
+    const [origin, setOrigin] = useState("");
     const router = useRouter();
     const { user } = useAuth();
 
     const handleImportAnimal = async () => {
-        if (!species || !breed || !age || !medicalHistory || !quantity || !status) {
-            showAlert("Error", "Por favor completa todos los campos obligatorios.", () => {});
+        if (!species || !breed || !age || !medicalHistory || !quantity || !status || !origin.trim()) {
+            showAlert("Error", "Por favor completa todos los campos obligatorios, incluido el origen.", () => {});
             return;
         }
 
@@ -79,6 +80,7 @@ export default function ImportForm() {
                 createdAt: new Date().toISOString(),
                 createdBy: user.uid,
                 isImported: true,
+                origin: origin.trim(),
             };
 
             const importedAnimalData = {
@@ -91,15 +93,24 @@ export default function ImportForm() {
                 quantity,
                 farmId: user.farmId,
                 importedAt: serverTimestamp(),
+                origin: origin.trim(),
             };
 
             batch.set(animalRef, animalData);
             batch.set(importedAnimalRef, importedAnimalData);
 
             await batch.commit();
-            console.log("Animal importado:", { animalId, farmId: user.farmId, species, quantity });
+            console.log("Animal importado:", { animalId, farmId: user.farmId, species, quantity, origin });
 
-            showAlert("Éxito", "Animal importado correctamente.", () => {
+            showAlert("Éxito", `Animal importado correctamente desde: ${origin}.`, () => {
+                setSpecies("");
+                setBreed("");
+                setAge("");
+                setMedicalHistory("");
+                setQuantity(1);
+                setStatus("");
+                setDisease("");
+                setOrigin("");
                 router.push("/farmManagerMenu/commerce/import/import");
             });
         } catch (error: any) {
@@ -264,6 +275,20 @@ export default function ImportForm() {
                             <Icon name="plus" size={20} color={COLORS.forestGreen} />
                         </TouchableOpacity>
                     </View>
+                </View>
+
+                <View style={styles.inputContainer}>
+                    <View style={styles.inputHeader}>
+                        <Icon name="truck-delivery" size={20} color={COLORS.forestGreen} style={styles.inputIcon} />
+                        <Text style={styles.label}>Origen de Importación</Text>
+                    </View>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Ej. Finca La Aurora"
+                        value={origin}
+                        onChangeText={setOrigin}
+                        placeholderTextColor={COLORS.softBrown}
+                    />
                 </View>
 
                 <TouchableOpacity

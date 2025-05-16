@@ -21,6 +21,7 @@ interface ExportedAnimal {
     isImported: boolean;
     quantity: number;
     exportedAt: string;
+    destination: string;
 }
 
 export default function ExportList() {
@@ -147,6 +148,13 @@ export default function ExportList() {
                     <Text style={styles.quantityText}>
                         <Text style={{ fontWeight: 'bold' }}>Exportado: </Text>
                         {new Date(item.exportedAt).toLocaleDateString("es-ES")}
+                    </Text>
+                    </View>
+
+                    <View style={styles.quantityRow}>
+                    <Text style={styles.quantityText}>
+                        <Text style={{ fontWeight: 'bold' }}>Destino: </Text>
+                        {item.destination}
                     </Text>
                     </View>
                 </View>

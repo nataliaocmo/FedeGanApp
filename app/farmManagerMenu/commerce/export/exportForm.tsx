@@ -3,11 +3,12 @@ import { db } from "@/utils/FirebaseConfig";
 import { useRouter } from "expo-router";
 import { collection, doc, getDoc, onSnapshot, query, where, writeBatch } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
-import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 
 const COLORS = {
     forestGreen: "#2E7D32",
+    lightGreen: "#A5D6A7",
     softBrown: "#8D6E63",
     cream: "#F1F8E9",
     white: "#FFFFFF",
@@ -18,7 +19,7 @@ interface Animal {
     id: string;
     species: string;
     farmId: string;
-    isImported?: boolean; // Cambiado a opcional para reflejar datos reales
+    isImported?: boolean;
     quantity?: number;
 }
 
@@ -26,6 +27,7 @@ export default function ExportForm() {
     const { user } = useAuth();
     const [animals, setAnimals] = useState<Animal[]>([]);
     const [selectedAnimalIds, setSelectedAnimalIds] = useState<string[]>([]);
+    const [destination, setDestination] = useState("");
     const [farmName, setFarmName] = useState<string>("Cargando...");
     const [loading, setLoading] = useState(true);
     const [debugInfo, setDebugInfo] = useState<string>("");
@@ -162,6 +164,11 @@ export default function ExportForm() {
             return;
         }
 
+        if (!destination.trim()) {
+            Alert.alert("Advertencia", "Por favor, ingresa el destino de la exportación.");
+            return;
+        }
+
         if (farmName === "Finca no encontrada" || farmName === "Error al cargar") {
             Alert.alert("Error", "No se puede guardar: La finca no es válida.");
             return;
@@ -177,7 +184,8 @@ export default function ExportForm() {
                     species: animal.species,
                     farmId: animal.farmId,
                     quantity: animal.quantity ?? 0,
-                    isImported: animal.isImported ?? false, // Valor por defecto false si undefined
+                    isImported: animal.isImported ?? false,
+                    destination: destination.trim(),
                     exportedAt: new Date().toISOString(),
                 });
 
@@ -186,8 +194,8 @@ export default function ExportForm() {
             });
 
             await batch.commit();
-            console.log(`Animales exportados para ${farmName}:`, selectedAnimalIds);
-            Alert.alert("Éxito", "Los animales seleccionados han sido exportados.");
+            console.log(`Animales exportados para ${farmName} al destino ${destination}:`, selectedAnimalIds);
+            Alert.alert("Éxito", `Los animales han sido exportados al destino: ${destination}.`);
             router.push("/farmManagerMenu/commerce/export/export");
         } catch (error: any) {
             console.error("Error al exportar animales:", error.message, { code: error.code });
@@ -278,6 +286,19 @@ export default function ExportForm() {
                         </View>
                     }
                 />
+                <View style={styles.inputContainer}>
+                    <View style={styles.inputHeader}>
+                        <Icon name="truck-delivery" size={20} color={COLORS.forestGreen} style={styles.inputIcon} />
+                        <Text style={styles.label}>Destino de Exportación</Text>
+                    </View>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Ej. Finca El Progreso"
+                        value={destination}
+                        onChangeText={setDestination}
+                        placeholderTextColor={COLORS.softBrown}
+                    />
+                </View>
                 <TouchableOpacity
                     style={[styles.submitButton, selectedAnimalIds.length === 0 && styles.submitButtonDisabled]}
                     onPress={handleSubmit}
@@ -406,6 +427,39 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: COLORS.softBrown,
         textAlign: "center",
+    },
+    inputContainer: {
+        width: "100%",
+        marginBottom: 16,
+        marginTop: 8,
+    },
+    inputHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginBottom: 6,
+    },
+    inputIcon: {
+        marginRight: 8,
+    },
+    label: {
+        fontSize: 14,
+        color: COLORS.darkGray,
+        fontWeight: "500",
+    },
+    input: {
+        backgroundColor: COLORS.white,
+        borderColor: COLORS.lightGreen,
+        borderWidth: 1,
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        fontSize: 16,
+        color: COLORS.darkGray,
+        shadowColor: COLORS.darkGray,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
     },
     submitButton: {
         flexDirection: "row",

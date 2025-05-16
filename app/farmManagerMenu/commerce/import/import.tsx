@@ -25,6 +25,7 @@ interface ImportedAnimal {
     quantity: number;
     farmId: string;
     importedAt: string;
+    origin: string;
 }
 
 export default function ImportList() {
@@ -146,9 +147,10 @@ export default function ImportList() {
                         </Text>
                     </View>
                     )}
+
                     <View style={styles.quantityRow}>
                     <Text style={styles.quantityText}>
-                        <Text style={{ fontWeight: 'bold' }}>Importado: </Text>{new Date(item.importedAt).toLocaleDateString("es-ES")}
+                        <Text style={{ fontWeight: 'bold' }}>Origen: </Text>{item.origin}
                     </Text>
                     </View>
                 </View>
