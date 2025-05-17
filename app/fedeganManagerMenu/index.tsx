@@ -2,10 +2,10 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import React from "react";
 import Icon from "react-native-vector-icons/Ionicons";
+import Menu from "../farmManagerMenu/settings/menu";
 import CampaignsMenu from "./campaigns/menu";
 import CommerceMenu from "./commerce/menu";
 import BrotesMenu from "./outbreaks/menu";
-import Menu from "./settings/menu";
 //import  from "./campaigns_Screen.tsx";
 //import  from "./settings_Screen.tsx";
 
